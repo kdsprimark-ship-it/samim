@@ -1,0 +1,8 @@
+{
+  "name": "SunnyTrans Pro - Logistics Management System",
+  "description": "A high-performance React-based logistics management system for SunnyTrans International Ltd. featuring shipment tracking, finance, H&M cutoff analysis, and extensive system customization.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
