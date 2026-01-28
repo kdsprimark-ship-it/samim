@@ -22,7 +22,9 @@ import {
   RefreshCw,
   Zap,
   DollarSign,
-  TrendingDown
+  Activity,
+  ShieldCheck,
+  Server
 } from 'lucide-react';
 import { Shipment, Transaction, AppSettings } from '../types';
 import Swal from 'sweetalert2';
@@ -45,8 +47,8 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const stats = useMemo(() => {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const currentMonthStr = now.toISOString().substring(0, 7);
+    const todayStr = '2026-01-28'; // Locked to requested user timeline
+    const currentMonthStr = '2026-01';
 
     const getShipmentBilling = (s: Shipment) => Number(s.totalIndent || 0);
 
@@ -102,80 +104,107 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   if (isFullScreen) {
     return (
-      <div className="fixed inset-0 bg-[#020617] text-white z-[90] p-10 animate-fadeIn overflow-hidden flex flex-col gap-10">
+      <div className="fixed inset-0 bg-[#020617] text-white z-[90] p-8 animate-fadeIn overflow-hidden flex flex-col gap-8">
         
-        {/* TERMINAL HEADER */}
-        <div className="flex justify-between items-end border-b-2 border-white/10 pb-6">
-           <div className="space-y-1">
-              <h1 className="text-4xl font-black tracking-tighter flex items-center gap-4">
-                 <Zap className="text-yellow-400 fill-yellow-400" size={36}/>
-                 {settings.appName} TERMINAL <span className="text-blue-500">DISPLAY 3</span>
-              </h1>
-              <p className="text-[12px] font-bold text-gray-500 uppercase tracking-[0.5em]">{settings.appTagline}</p>
+        {/* TERMINAL HEADER DISPLAY */}
+        <div className="flex justify-between items-center bg-white/5 border-b-2 border-blue-500/30 p-6 rounded-t-3xl shadow-[0_0_50px_rgba(37,99,235,0.1)]">
+           <div className="flex items-center gap-6">
+              <div className="p-4 bg-blue-600 rounded-2xl shadow-[0_0_20px_rgba(37,99,235,0.5)]">
+                 <Zap className="text-white fill-white" size={32}/>
+              </div>
+              <div>
+                 <h1 className="text-4xl font-black tracking-tighter flex items-center gap-4">
+                    {settings.appName} <span className="text-blue-500">TERMINAL DISPLAY 3</span>
+                 </h1>
+                 <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.5em]">{settings.appTagline} • OPERATIONAL STREAM</p>
+              </div>
            </div>
            
            <div className="flex gap-4">
+              <div className="bg-black/40 border border-white/10 px-6 py-3 rounded-xl flex items-center gap-4">
+                 <div className="flex flex-col text-right">
+                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">System Health</p>
+                    <p className="text-xs font-black text-emerald-500 uppercase">Secure / Online</p>
+                 </div>
+                 <Server size={20} className="text-emerald-500"/>
+              </div>
               <button 
                 onClick={performSync} 
                 disabled={isSyncing} 
-                className={`flex items-center gap-3 px-8 py-3 rounded-xl border-2 transition-all font-black text-xs ${isSyncing ? 'bg-orange-500 text-white animate-pulse' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                className={`flex items-center gap-3 px-8 py-3 rounded-xl border-2 transition-all font-black text-xs ${isSyncing ? 'bg-orange-500 text-white animate-pulse border-orange-600' : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-blue-500/50'}`}
               >
                 <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
-                {isSyncing ? 'REFRESHING DATABASE...' : 'REFRESH UPDATES'}
+                {isSyncing ? 'SYNCHRONIZING...' : 'REFRESH LIVE DATA'}
               </button>
            </div>
         </div>
 
-        {/* DISPLAY 3 COLUMN GRID */}
+        {/* 3-COLUMN HIGH DENSITY GRID */}
         <div className="flex-1 grid grid-cols-3 gap-8 overflow-hidden">
            
-           {/* COLUMN 1: OPERATIONAL METRICS */}
-           <div className="flex flex-col gap-6">
-              <div className="bg-white/5 border border-white/10 p-6 rounded-3xl space-y-6">
-                 <p className="text-[11px] font-black text-blue-400 uppercase tracking-widest border-b border-white/10 pb-4">Operational Snapshot</p>
-                 <div className="grid grid-cols-2 gap-4">
-                    <MiniDisplay label="MONTH DOCS" value={stats.monthDocCount} icon={<Layers size={14}/>} />
-                    <MiniDisplay label="MONTH TONS" value={stats.monthTonCount} icon={<TrendingUp size={14}/>} />
+           {/* DISPLAY 1: LOGISTICS MONITOR */}
+           <div className="flex flex-col gap-6 animate-fadeInRight" style={{ animationDelay: '0.1s' }}>
+              <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] space-y-8 flex flex-col shadow-2xl">
+                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                    <p className="text-sm font-black text-blue-400 uppercase tracking-[0.2em]">Operational Pulse</p>
+                    <Activity size={20} className="text-blue-400 animate-pulse"/>
                  </div>
-                 <div className="p-6 bg-blue-600/10 border border-blue-500/20 rounded-2xl">
-                    <p className="text-[10px] font-black text-blue-400 uppercase mb-2">Today's Gross Indent</p>
-                    <p className="text-4xl font-black font-mono tracking-tighter">TK {stats.todayIndent.toLocaleString()}</p>
+                 <div className="grid grid-cols-1 gap-6">
+                    <MiniTerminalDisplay label="TOTAL MONTH DOCUMENTS" value={stats.monthDocCount} icon={<Layers size={20}/>} color="blue" />
+                    <MiniTerminalDisplay label="TOTAL MONTH TONNAGE" value={stats.monthTonCount} icon={<TrendingUp size={20}/>} color="cyan" />
+                 </div>
+                 <div className="flex-1 p-8 bg-blue-600/10 border-2 border-blue-500/20 rounded-3xl flex flex-col justify-center items-center text-center group hover:bg-blue-600/20 transition-all">
+                    <p className="text-[12px] font-black text-blue-400 uppercase mb-3 tracking-[0.3em]">TODAY'S GROSS INDENT</p>
+                    <div className="flex items-end gap-3">
+                       <span className="text-2xl font-bold text-blue-500 mb-2">TK</span>
+                       <p className="text-6xl font-black font-mono tracking-tighter drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">{stats.todayIndent.toLocaleString()}</p>
+                    </div>
                  </div>
               </div>
-              <div className="flex-1 bg-white/5 border border-white/10 p-6 rounded-3xl overflow-hidden flex flex-col">
-                 <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4">Registry Summary</p>
+
+              <div className="bg-white/5 border border-white/10 p-8 rounded-[2.5rem] flex flex-col gap-4 shadow-xl">
+                 <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                    <ShieldCheck size={14}/> SYSTEM REGISTRY SUMMARY
+                 </p>
                  <div className="space-y-4 font-mono">
-                    <SummaryRow label="Total Invoices" value={shipments.length} />
-                    <SummaryRow label="Active Accounts" value={new Set(shipments.map(s => s.employeeName)).size} />
-                    <SummaryRow label="Sub Accounts" value={transactions.length} />
+                    <SummaryRow label="TOTAL MASTER INVOICES" value={shipments.length} />
+                    <SummaryRow label="ACTIVE SYSTEM OPERATORS" value={new Set(shipments.map(s => s.employeeName)).size} />
+                    <SummaryRow label="FINANCIAL SUB-ACCOUNTS" value={transactions.length} />
                  </div>
               </div>
            </div>
 
-           {/* COLUMN 2: FINANCIAL CORE (THE BIG NUMBERS) */}
-           <div className="flex flex-col gap-6">
-              <BigPanel label="TOTAL GROSS INDENT" value={stats.totalIndent} color="blue" icon={<Database size={24}/>} />
-              <BigPanel label="TOTAL PAID REVENUE" value={stats.totalReceived} color="green" icon={<CheckCircle2 size={24}/>} />
-              <BigPanel label="NET OUTSTANDING DUE" value={stats.totalDue} color="red" icon={<AlertCircle size={24}/>} />
+           {/* DISPLAY 2: FINANCIAL CORE (THE BIG PANELS) */}
+           <div className="flex flex-col gap-6 animate-fadeInUp">
+              <LargeTerminalPanel label="TOTAL SYSTEM GROSS INDENT" value={stats.totalIndent} color="blue" icon={<Database size={32}/>} />
+              <LargeTerminalPanel label="TOTAL PAID SYSTEM REVENUE" value={stats.totalReceived} color="green" icon={<CheckCircle2 size={32}/>} />
+              <LargeTerminalPanel label="NET OUTSTANDING SYSTEM DUE" value={stats.totalDue} color="red" icon={<AlertCircle size={32}/>} />
            </div>
 
-           {/* COLUMN 3: REAL-TIME EVENT STREAM */}
-           <div className="flex flex-col bg-white/5 border border-white/10 rounded-3xl overflow-hidden">
-              <div className="p-6 border-b border-white/10 bg-white/5">
-                 <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Real-Time Journal Feed</p>
+           {/* DISPLAY 3: LIVE SYSTEM JOURNAL */}
+           <div className="flex flex-col bg-white/5 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl animate-fadeInLeft" style={{ animationDelay: '0.2s' }}>
+              <div className="p-8 border-b border-white/10 bg-white/5 flex justify-between items-center">
+                 <div>
+                    <p className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Real-Time Audit Journal</p>
+                    <p className="text-[9px] text-gray-600 mt-1 font-bold">STREAMING LATEST SYSTEM ACTIVITY</p>
+                 </div>
+                 <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black text-blue-400">LIVE FEED</div>
               </div>
-              <div className="flex-1 overflow-y-auto custom-scroll p-2 space-y-1">
-                 {shipments.slice(0, 30).map(s => {
+              <div className="flex-1 overflow-y-auto custom-scroll p-4 space-y-2 bg-black/20">
+                 {shipments.slice(0, 40).map((s, idx) => {
                    const due = Number(s.totalIndent) - Number(s.paid || 0);
                    return (
-                     <div key={s.id} className="p-4 bg-white/5 border border-white/5 rounded-xl flex justify-between items-center group hover:bg-white/10 transition-colors">
-                        <div className="space-y-1">
-                           <p className="text-[10px] font-black text-blue-400 font-mono">#{s.invoiceNo}</p>
-                           <p className="text-[9px] font-bold text-gray-500 uppercase truncate max-w-[150px]">{s.shipper}</p>
+                     <div key={s.id} className="p-5 bg-white/5 border border-white/5 rounded-2xl flex justify-between items-center group hover:bg-white/10 transition-all hover:border-blue-500/30">
+                        <div className="space-y-2">
+                           <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-black text-blue-400 font-mono bg-blue-500/10 px-2 py-0.5 rounded">#{s.invoiceNo}</span>
+                              <span className="text-[8px] font-bold text-gray-600 uppercase font-mono">SEQ-{40-idx}</span>
+                           </div>
+                           <p className="text-[10px] font-bold text-gray-300 uppercase truncate max-w-[200px]">{s.shipper}</p>
                         </div>
                         <div className="text-right">
-                           <p className={`text-[12px] font-black font-mono ${due > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>TK {s.totalIndent.toLocaleString()}</p>
-                           <p className="text-[8px] text-gray-600 uppercase">{s.date}</p>
+                           <p className={`text-sm font-black font-mono tracking-tighter ${due > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>TK {s.totalIndent.toLocaleString()}</p>
+                           <p className="text-[9px] text-gray-600 font-bold uppercase">{s.date}</p>
                         </div>
                      </div>
                    );
@@ -185,14 +214,18 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         </div>
 
-        {/* TERMINAL FOOTER */}
-        <div className="flex justify-between items-center text-[10px] font-black text-gray-600 uppercase tracking-widest">
-           <div className="flex gap-10">
-              <p>Status: <span className="text-emerald-500">System Healthy</span></p>
-              <p>Security: <span className="text-blue-500">AES-256 Encrypted</span></p>
-              <p>Mode: <span className="text-yellow-500">Terminal Operational</span></p>
+        {/* TERMINAL FOOTER STATUS BAR */}
+        <div className="flex justify-between items-center text-[11px] font-black text-gray-600 uppercase tracking-[0.5em] border-t border-white/10 pt-6">
+           <div className="flex gap-12">
+              <p className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></span> CONNECTIVITY: SECURE</p>
+              <p className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_#3b82f6]"></span> ENGINE: ERP V6.0 PRO</p>
+              <p className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_10px_#eab308]"></span> MODE: MASTER ADMIN</p>
            </div>
-           <p>Last Sync: {new Date().toLocaleTimeString()}</p>
+           <div className="flex items-center gap-4">
+              <p>SESSION ID: {Math.random().toString(36).substring(7).toUpperCase()}</p>
+              <div className="w-[1px] h-4 bg-white/10"></div>
+              <p>TIMESTAMP: {new Date().toLocaleTimeString()}</p>
+           </div>
         </div>
       </div>
     );
@@ -237,10 +270,11 @@ const Dashboard: React.FC<DashboardProps> = ({
            <div className="w-[1px] h-6 bg-black/10 mx-1"></div>
            <button 
              onClick={onToggleFullscreen}
-             className="p-2 rounded-full transition-all bg-gray-800 text-white hover:bg-gray-700 shadow-md active:scale-90"
+             className="p-2 rounded-full transition-all bg-gray-800 text-white hover:bg-gray-700 shadow-md active:scale-90 flex items-center gap-2 px-4"
              title="Maximize Terminal"
            >
               <Maximize2 size={16}/>
+              <span className="text-[9px] font-black">TERMINAL</span>
            </button>
         </div>
       </div>
@@ -343,39 +377,47 @@ const Dashboard: React.FC<DashboardProps> = ({
   );
 };
 
-const MiniDisplay = ({ label, value, icon }: any) => (
-  <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center gap-3">
-     <div className="p-2 bg-white/5 rounded-lg text-blue-400">{icon}</div>
-     <div>
-        <p className="text-[8px] font-black text-gray-500 uppercase">{label}</p>
-        <p className="text-xl font-black font-mono tracking-tight">{value}</p>
-     </div>
-  </div>
-);
-
-const SummaryRow = ({ label, value }: any) => (
-  <div className="flex justify-between items-center text-[11px] border-b border-white/5 pb-2">
-     <span className="text-gray-500 uppercase font-bold">{label}</span>
-     <span className="font-black text-white">{value}</span>
-  </div>
-);
-
-const BigPanel = ({ label, value, color, icon }: any) => {
-  const themes: any = {
-    blue: "border-blue-500/20 bg-blue-500/5 text-blue-400",
-    green: "border-emerald-500/20 bg-emerald-500/5 text-emerald-400",
-    red: "border-rose-500/20 bg-rose-500/5 text-rose-400"
+const MiniTerminalDisplay = ({ label, value, icon, color }: any) => {
+  const colors: any = {
+    blue: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    cyan: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20"
   };
   return (
-    <div className={`flex-1 p-8 border-2 rounded-[2rem] flex flex-col justify-center relative overflow-hidden ${themes[color]}`}>
-       <div className="absolute top-6 right-8 opacity-20">{icon}</div>
-       <p className="text-[12px] font-black uppercase tracking-[0.3em] mb-3 opacity-60">{label}</p>
-       <div className="flex items-end gap-3">
-          <span className="text-2xl font-bold mb-2">TK</span>
-          <h2 className="text-7xl font-black font-mono tracking-tighter drop-shadow-2xl">
+    <div className={`p-6 rounded-3xl border flex items-center gap-6 shadow-lg ${colors[color]}`}>
+       <div className="p-4 bg-white/5 rounded-2xl">{icon}</div>
+       <div>
+          <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">{label}</p>
+          <p className="text-3xl font-black font-mono tracking-tighter">{value}</p>
+       </div>
+    </div>
+  );
+};
+
+const SummaryRow = ({ label, value }: any) => (
+  <div className="flex justify-between items-center text-[12px] border-b border-white/5 pb-3 group">
+     <span className="text-gray-500 uppercase font-bold group-hover:text-white transition-colors">{label}</span>
+     <span className="font-black text-white bg-white/5 px-3 py-1 rounded-lg">{value}</span>
+  </div>
+);
+
+const LargeTerminalPanel = ({ label, value, color, icon }: any) => {
+  const themes: any = {
+    blue: "border-blue-500/20 bg-blue-500/5 text-blue-400 shadow-[inset_0_0_50px_rgba(37,99,235,0.05)]",
+    green: "border-emerald-500/20 bg-emerald-500/5 text-emerald-400 shadow-[inset_0_0_50px_rgba(16,185,129,0.05)]",
+    red: "border-rose-500/20 bg-rose-500/5 text-rose-400 shadow-[inset_0_0_50px_rgba(225,29,72,0.05)]"
+  };
+  const textColors: any = { blue: "text-blue-500", green: "text-emerald-500", red: "text-rose-500" };
+  return (
+    <div className={`flex-1 p-10 border-2 rounded-[3rem] flex flex-col justify-center relative overflow-hidden group transition-all hover:scale-[1.01] ${themes[color]}`}>
+       <div className={`absolute top-8 right-10 opacity-20 ${textColors[color]}`}>{icon}</div>
+       <p className="text-sm font-black uppercase tracking-[0.4em] mb-4 opacity-50">{label}</p>
+       <div className="flex items-end gap-4">
+          <span className={`text-3xl font-bold mb-3 ${textColors[color]}`}>TK</span>
+          <h2 className="text-8xl font-black font-mono tracking-tighter drop-shadow-2xl">
             {value.toLocaleString()}
           </h2>
        </div>
+       <div className={`absolute bottom-0 left-0 h-1 bg-current transition-all duration-700 w-0 group-hover:w-full ${textColors[color]}`}></div>
     </div>
   );
 };
