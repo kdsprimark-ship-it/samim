@@ -1,56 +1,14 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  LayoutDashboard, 
-  Database, 
-  FileText, 
-  Clock, 
-  Settings, 
-  LogOut, 
-  Truck as TruckIcon, 
-  DollarSign, 
-  Users, 
-  Tag, 
-  Briefcase, 
-  Layers, 
-  Info, 
-  Anchor, 
-  UserPlus, 
-  FileCheck, 
-  PlusCircle,
-  Maximize2,
-  Minimize2,
-  Globe,
-  ClipboardList,
-  Wallet,
-  Settings2,
-  ShieldCheck,
-  UserCircle,
-  Shield,
-  Menu,
-  ChevronLeft,
-  ChevronRight,
-  Monitor,
-  AlertTriangle,
-  Cloud,
-  CloudOff,
-  RefreshCw,
-  Scan,
-  CheckCircle2,
-  DownloadCloud
+  LayoutDashboard, Database, FileText, Clock, Settings, LogOut, Truck as TruckIcon, 
+  DollarSign, Users, Tag, Briefcase, Layers, Info, Anchor, UserPlus, FileCheck, 
+  PlusCircle, Globe, ClipboardList, Wallet, Settings2, ShieldCheck, Menu, RefreshCw,
+  Minimize2
 } from 'lucide-react';
 import { 
-  Shipment, 
-  Transaction, 
-  AppSettings, 
-  ListData, 
-  Shipper, 
-  Employee, 
-  Buyer, 
-  Depot, 
-  PriceRate,
-  Truck as TruckType,
-  UserSession
+  Shipment, Transaction, AppSettings, ListData, Shipper, Employee, Buyer, Depot, 
+  PriceRate, Truck as TruckType, UserSession 
 } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_LISTS } from './constants';
 import Swal from 'sweetalert2';
@@ -68,7 +26,6 @@ import ManageBuyers from './views/ManageBuyers';
 import ManageDepots from './views/ManageDepots';
 import ManageEmployees from './views/ManageEmployees';
 import ManagePrices from './views/ManagePrices';
-import ExportImport from './views/ExportImport';
 import ExportInfo from './views/ExportInfo';
 import AssociationInfo from './views/AssociationInfo';
 import AccountInfo from './views/AccountInfo';
@@ -86,10 +43,11 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString());
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Data States
+  // Unified Data State
   const [shipments, setShipments] = useState<Shipment[]>(() => JSON.parse(localStorage.getItem('st_shipments') || '[]'));
   const [transactions, setTransactions] = useState<Transaction[]>(() => JSON.parse(localStorage.getItem('st_transactions') || '[]'));
   const [shippers, setShippers] = useState<Shipper[]>(() => JSON.parse(localStorage.getItem('st_shippers') || '[]'));
@@ -98,16 +56,12 @@ const App: React.FC = () => {
   const [depots, setDepots] = useState<Depot[]>(() => JSON.parse(localStorage.getItem('st_depots_list') || '[]'));
   const [prices, setPrices] = useState<PriceRate[]>(() => JSON.parse(localStorage.getItem('st_prices') || '[]'));
   const [trucks, setTrucks] = useState<TruckType[]>(() => JSON.parse(localStorage.getItem('st_trucks') || '[]'));
-  const [lists, setLists] = useState<ListData>(() => JSON.parse(localStorage.getItem('st_lists') || JSON.stringify({ ...DEFAULT_LISTS })));
+  const [lists, setLists] = useState<ListData>(() => JSON.parse(localStorage.getItem('st_lists') || JSON.stringify(DEFAULT_LISTS)));
   const [settings, setSettings] = useState<AppSettings>(() => JSON.parse(localStorage.getItem('st_settings') || JSON.stringify(DEFAULT_SETTINGS)));
   const [submittedInvoices, setSubmittedInvoices] = useState<string[]>(() => JSON.parse(localStorage.getItem('st_submitted_invoices') || '[]'));
 
-  // CLOUD SYNC ENGINE
   const performSync = useCallback(async (mode: 'PUSH' | 'PULL' = 'PUSH', silent = false) => {
-    if (!settings.googleSheetUrl) {
-      if (!silent && mode === 'PULL') Swal.fire('NO CLOUD URL', 'Set Google Apps Script URL in Settings.', 'info');
-      return;
-    }
+    if (!settings.googleSheetUrl) return;
     setIsSyncing(true);
     try {
       if (mode === 'PUSH') {
@@ -130,16 +84,11 @@ const App: React.FC = () => {
           if (d.settings) setSettings(d.settings);
         }
       }
-      if (!silent) Swal.fire({ title: 'SYNC COMPLETE', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsSyncing(false);
-    }
+      if (!silent) Swal.fire({ title: 'SYNC SUCCESSFUL', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+    } catch (e) { console.error(e); } finally { setIsSyncing(false); }
   }, [settings.googleSheetUrl, shipments, transactions, shippers, employees, buyers, depots, prices, trucks, lists, settings, submittedInvoices]);
 
   useEffect(() => { if (settings.googleSheetUrl) performSync('PULL', true); }, []);
-
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })), 1000);
     return () => clearInterval(timer);
@@ -169,76 +118,89 @@ const App: React.FC = () => {
     <div className={`flex h-screen overflow-hidden ${settings.theme === 'dark' ? 'dark' : ''}`} style={{ fontSize: `${settings.textSize}px`, fontFamily: settings.fontFamily }}>
       <div className="fixed inset-0 z-[-1] bg-cover bg-center brightness-[0.25]" style={{ backgroundImage: `url(${settings.wallpaper})` }}></div>
       
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-20'} transition-all duration-300 flex flex-col h-full text-slate-300 shadow-2xl z-50 border-r border-white/5 overflow-hidden`} style={{ background: `linear-gradient(180deg, ${settings.sidebarColor} 0%, #020617 100%)` }}>
-        <div className="h-16 flex items-center px-4 border-b border-white/5 bg-black/20 gap-4">
-          <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg ring-1 ring-white/20">
-             {settings.logoUrl ? <img src={settings.logoUrl} className="w-6 h-6 object-contain" alt="Logo" /> : <Globe size={22} className="text-white" />}
+      {!isFullScreen && (
+        <aside className={`${isSidebarOpen ? 'w-72' : 'w-20'} transition-all duration-300 flex flex-col h-full text-slate-300 shadow-2xl z-50 border-r border-white/5 overflow-hidden`} style={{ background: `linear-gradient(180deg, ${settings.sidebarColor} 0%, #020617 100%)` }}>
+          <div className="h-16 flex items-center px-4 border-b border-white/5 bg-black/20 gap-4">
+            <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg ring-1 ring-white/20">
+               {settings.logoUrl ? <img src={settings.logoUrl} className="w-6 h-6 object-contain" alt="Logo" /> : <Globe size={22} className="text-white" />}
+            </div>
+            {isSidebarOpen && <h1 className="font-black uppercase tracking-tight text-[15px] text-white truncate">{settings.appName}</h1>}
           </div>
-          {isSidebarOpen && <h1 className="font-black uppercase tracking-tight text-[15px] text-white truncate">{settings.appName}</h1>}
-        </div>
 
-        <nav className="flex-1 overflow-y-auto custom-scroll px-3 space-y-4 py-6">
-          <Section label="CORE ENGINE" isOpen={isSidebarOpen}>
-            <NavItem icon={<LayoutDashboard size={18}/>} label="DASHBOARD" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-            {isAdmin && <NavItem icon={<Wallet size={18}/>} label="ACCOUNT MASTER" active={activeTab === 'account_info'} onClick={() => setActiveTab('account_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
-            <NavItem icon={<FileText size={18}/>} label="SHIPMENT LOG" active={activeTab === 'live_sheet'} onClick={() => setActiveTab('live_sheet')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-            <NavItem icon={<Database size={18}/>} label="MASTER ARCHIVE" active={activeTab === 'master_sheet'} onClick={() => setActiveTab('master_sheet')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-          </Section>
-
-          <Section label="LOGISTICS MGMT" isOpen={isSidebarOpen}>
-            <NavItem icon={<UserPlus size={18}/>} label="NEW ENTRY" active={activeTab === 'employee_entry'} onClick={() => setActiveTab('employee_entry')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-            {isAdmin && <NavItem icon={<FileCheck size={18}/>} label="BILL SETTLEMENT" active={activeTab === 'bill_submission'} onClick={() => setActiveTab('bill_submission')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
-            <NavItem icon={<Clock size={18}/>} label="PENDING BILLS" active={activeTab === 'pending_indent'} onClick={() => setActiveTab('pending_indent')} isOpen={isSidebarOpen} badge={userShipments.filter(s => (s.totalIndent - s.paid) > 0.01).length} radius={settings.boxRadius} />
-            <NavItem icon={<TruckIcon size={18}/>} label="FLEET LOGS" active={activeTab === 'trucks'} onClick={() => setActiveTab('trucks')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-          </Section>
-
-          {isAdmin && (
-            <Section label="REGISTRY & CONTROL" isOpen={isSidebarOpen}>
-              <NavItem icon={<ShieldCheck size={18}/>} label="USER AUTH" active={activeTab === 'user_mgmt'} onClick={() => setActiveTab('user_mgmt')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-              <NavItem icon={<Anchor size={18}/>} label="SHIPPER LIST" active={activeTab === 'manage_shippers'} onClick={() => setActiveTab('manage_shippers')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-              <NavItem icon={<Tag size={18}/>} label="BUYER LIST" active={activeTab === 'manage_buyers'} onClick={() => setActiveTab('manage_buyers')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-              <NavItem icon={<Layers size={18}/>} label="DEPOT LIST" active={activeTab === 'manage_depots'} onClick={() => setActiveTab('manage_depots')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-              <NavItem icon={<Users size={18}/>} label="OPERATORS" active={activeTab === 'manage_employees'} onClick={() => setActiveTab('manage_employees')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-              <NavItem icon={<DollarSign size={18}/>} label="PRICE RULES" active={activeTab === 'manage_prices'} onClick={() => setActiveTab('manage_prices')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-              <NavItem icon={<PlusCircle size={18}/>} label="SUB ACCOUNTS" active={activeTab === 'sub_accounts'} onClick={() => setActiveTab('sub_accounts')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+          <nav className="flex-1 overflow-y-auto custom-scroll px-3 space-y-4 py-6">
+            <Section label="CORE ENGINE" isOpen={isSidebarOpen}>
+              <NavItem icon={<LayoutDashboard size={18}/>} label="DASHBOARD" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              {isAdmin && <NavItem icon={<Wallet size={18}/>} label="ACCOUNT MASTER" active={activeTab === 'account_info'} onClick={() => setActiveTab('account_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
+              <NavItem icon={<FileText size={18}/>} label="EXPORT LEDGER" active={activeTab === 'live_sheet'} onClick={() => setActiveTab('live_sheet')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              <NavItem icon={<Database size={18}/>} label="MASTER ARCHIVE" active={activeTab === 'master_sheet'} onClick={() => setActiveTab('master_sheet')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
             </Section>
-          )}
 
-          <Section label="SERVICES" isOpen={isSidebarOpen}>
-            <NavItem icon={<Info size={18}/>} label="INTELLIGENCE" active={activeTab === 'export_info'} onClick={() => setActiveTab('export_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-            <NavItem icon={<ClipboardList size={18}/>} label="ASSOCIATION" active={activeTab === 'association_info'} onClick={() => setActiveTab('association_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-            {isAdmin && <NavItem icon={<Briefcase size={18}/>} label="FINANCE PRO" active={activeTab === 'finance_pro'} onClick={() => setActiveTab('finance_pro')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
-            {isAdmin && <NavItem icon={<Settings size={18}/>} label="SETTINGS" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
-          </Section>
-        </nav>
+            <Section label="LOGISTICS MGMT" isOpen={isSidebarOpen}>
+              <NavItem icon={<UserPlus size={18}/>} label="NEW SHIPMENT" active={activeTab === 'employee_entry'} onClick={() => setActiveTab('employee_entry')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              {isAdmin && <NavItem icon={<FileCheck size={18}/>} label="BILL SETTLEMENT" active={activeTab === 'bill_submission'} onClick={() => setActiveTab('bill_submission')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
+              <NavItem icon={<Clock size={18}/>} label="PENDING BILLS" active={activeTab === 'pending_indent'} onClick={() => setActiveTab('pending_indent')} isOpen={isSidebarOpen} badge={userShipments.filter(s => (s.totalIndent - s.paid) > 0.01).length} radius={settings.boxRadius} />
+              <NavItem icon={<TruckIcon size={18}/>} label="FLEET LOGS" active={activeTab === 'trucks'} onClick={() => setActiveTab('trucks')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+            </Section>
 
-        <div className="p-4 border-t border-white/5 bg-black/40">
-          <button onClick={() => { setCurrentUser(null); localStorage.removeItem('st_session'); }} className="w-full flex items-center justify-center gap-3 bg-rose-600/10 hover:bg-rose-600 text-rose-500 hover:text-white p-3 transition-all font-black text-xs" style={{ borderRadius: settings.boxRadius }}>
-            <LogOut size={16}/> {isSidebarOpen && "EXIT SYSTEM"}
-          </button>
-        </div>
-      </aside>
+            {isAdmin && (
+              <Section label="REGISTRY & CONTROL" isOpen={isSidebarOpen}>
+                <NavItem icon={<ShieldCheck size={18}/>} label="USER AUTH" active={activeTab === 'user_mgmt'} onClick={() => setActiveTab('user_mgmt')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+                <NavItem icon={<Anchor size={18}/>} label="SHIPPER LIST" active={activeTab === 'manage_shippers'} onClick={() => setActiveTab('manage_shippers')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+                <NavItem icon={<Tag size={18}/>} label="BUYER LIST" active={activeTab === 'manage_buyers'} onClick={() => setActiveTab('manage_buyers')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+                <NavItem icon={<Layers size={18}/>} label="DEPOT LIST" active={activeTab === 'manage_depots'} onClick={() => setActiveTab('manage_depots')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+                <NavItem icon={<Users size={18}/>} label="OPERATORS" active={activeTab === 'manage_employees'} onClick={() => setActiveTab('manage_employees')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+                <NavItem icon={<DollarSign size={18}/>} label="PRICE RULES" active={activeTab === 'manage_prices'} onClick={() => setActiveTab('manage_prices')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+                <NavItem icon={<PlusCircle size={18}/>} label="SUB ACCOUNTS" active={activeTab === 'sub_accounts'} onClick={() => setActiveTab('sub_accounts')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              </Section>
+            )}
 
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
-        <header className="h-14 border-b border-black/10 flex items-center justify-between px-6 backdrop-blur-md" style={{ backgroundColor: settings.backgroundColor + 'CC' }}>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-black/5 rounded-lg text-slate-600"><Menu size={20}/></button>
-            <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-800">{activeTab.replace('_', ' ')} TERMINAL</h2>
-          </div>
-          <div className="flex items-center gap-4">
-            <button onClick={() => performSync('PULL')} disabled={isSyncing} className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${isSyncing ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}>
-              <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-              <span className="text-[9px] font-black uppercase">{isSyncing ? 'Syncing...' : 'REFRESH UPDATES'}</span>
+            <Section label="SERVICES" isOpen={isSidebarOpen}>
+              <NavItem icon={<Info size={18}/>} label="INTELLIGENCE" active={activeTab === 'export_info'} onClick={() => setActiveTab('export_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              <NavItem icon={<ClipboardList size={18}/>} label="ASSOCIATION" active={activeTab === 'association_info'} onClick={() => setActiveTab('association_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              {isAdmin && <NavItem icon={<Briefcase size={18}/>} label="FINANCE PRO" active={activeTab === 'finance_pro'} onClick={() => setActiveTab('finance_pro')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
+              {isAdmin && <NavItem icon={<Settings size={18}/>} label="CONFIG SETTINGS" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
+            </Section>
+          </nav>
+
+          <div className="p-4 border-t border-white/5 bg-black/40">
+            <button onClick={() => { setCurrentUser(null); localStorage.removeItem('st_session'); }} className="w-full flex items-center justify-center gap-3 bg-rose-600/10 hover:bg-rose-600 text-rose-500 hover:text-white p-3 transition-all font-black text-xs" style={{ borderRadius: settings.boxRadius }}>
+              <LogOut size={16}/> {isSidebarOpen && "EXIT SYSTEM"}
             </button>
-            <div className="bg-white/60 rounded-full px-5 py-1.5 ring-1 ring-white font-mono font-black text-[12px]">{currentTime}</div>
           </div>
-        </header>
+        </aside>
+      )}
 
-        <div className="flex-1 overflow-y-auto p-6 custom-scroll">
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {!isFullScreen && (
+          <header className="h-14 border-b border-black/10 flex items-center justify-between px-6 backdrop-blur-md" style={{ backgroundColor: settings.backgroundColor + 'CC' }}>
+            <div className="flex items-center gap-4">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-black/5 rounded-lg text-slate-600"><Menu size={20}/></button>
+              <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-800">{activeTab.replace('_', ' ')} TERMINAL</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              <button onClick={() => performSync('PULL')} disabled={isSyncing} className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${isSyncing ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}>
+                <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                <span className="text-[9px] font-black uppercase">{isSyncing ? 'Refreshing...' : 'REFRESH UPDATES'}</span>
+              </button>
+              <div className="bg-white/60 rounded-full px-5 py-1.5 ring-1 ring-white font-mono font-black text-[12px]">{currentTime}</div>
+            </div>
+          </header>
+        )}
+
+        {isFullScreen && (
+          <button 
+            onClick={() => setIsFullScreen(false)} 
+            className="fixed top-4 right-4 z-[100] bg-rose-600 text-white p-3 rounded-full shadow-2xl hover:bg-rose-700 transition-all flex items-center gap-2 font-black text-[10px]"
+          >
+            <Minimize2 size={16}/> EXIT TERMINAL MODE
+          </button>
+        )}
+
+        <div className={`flex-1 overflow-y-auto ${isFullScreen ? 'p-0' : 'p-6'} custom-scroll`}>
           {(() => {
             const commonProps = { swalSize: settings.swalSize };
             switch (activeTab) {
-              case 'dashboard': return <Dashboard shipments={userShipments} transactions={transactions} settings={settings} setShipments={setShipments} />;
+              case 'dashboard': return <Dashboard shipments={userShipments} transactions={transactions} settings={settings} setShipments={setShipments} onToggleFullscreen={() => setIsFullScreen(!isFullScreen)} isFullScreen={isFullScreen} />;
               case 'account_info': return <AccountInfo transactions={transactions} setTransactions={setTransactions} shipments={shipments} setShipments={setShipments} lists={lists} employees={employees} {...commonProps} />;
               case 'live_sheet': return <LiveSheet shipments={userShipments} setShipments={setShipments} shippers={shippers} buyers={buyers} employees={employees} depots={depots} prices={prices} {...commonProps} />;
               case 'master_sheet': return <MasterDataSheet shipments={userShipments} {...commonProps} />;

@@ -16,7 +16,9 @@ import {
   ExternalLink,
   Lock,
   Unlock,
-  Settings
+  Settings,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { Shipment, Transaction, AppSettings } from '../types';
 import Swal from 'sweetalert2';
@@ -26,9 +28,11 @@ interface DashboardProps {
   transactions: Transaction[];
   settings: AppSettings;
   setShipments?: React.Dispatch<React.SetStateAction<Shipment[]>>;
+  onToggleFullscreen?: () => void;
+  isFullScreen?: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ shipments, transactions, settings, setShipments }) => {
+const Dashboard: React.FC<DashboardProps> = ({ shipments, transactions, settings, setShipments, onToggleFullscreen, isFullScreen }) => {
   const [dashboardMode, setDashboardMode] = useState<'view' | 'edit'>('view');
 
   const stats = useMemo(() => {
@@ -87,14 +91,14 @@ const Dashboard: React.FC<DashboardProps> = ({ shipments, transactions, settings
   };
 
   return (
-    <div className="relative min-h-full space-y-6 animate-fadeIn pb-10">
+    <div className={`relative min-h-full space-y-6 animate-fadeIn pb-10 ${isFullScreen ? 'bg-[#c0c7d1] p-10' : ''}`}>
       
       {/* BRAND WATERMARK BACKGROUND */}
       {settings.logoUrl && (
         <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none z-0">
            <img 
              src={settings.logoUrl} 
-             className="w-[450px] md:w-[600px] h-auto object-contain grayscale scale-110" 
+             className={`${isFullScreen ? 'w-[800px]' : 'w-[450px] md:w-[600px]'} h-auto object-contain grayscale scale-110`} 
              alt="Anniversary Watermark" 
            />
         </div>
@@ -102,14 +106,14 @@ const Dashboard: React.FC<DashboardProps> = ({ shipments, transactions, settings
 
       {/* DASHBOARD HEADER & MODE TOGGLE */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
-        <div>
+        <div className={isFullScreen ? 'bg-white/80 p-4 rounded-2xl shadow-xl' : ''}>
            <h2 className="text-xl font-black uppercase text-slate-800 tracking-tight flex items-center gap-3">
               <Settings size={20} className="text-blue-900"/> {settings.appName} COMMAND CENTER
            </h2>
            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">{settings.appTagline}</p>
         </div>
         
-        <div className="flex bg-white/50 border border-black/10 rounded-full p-1 shadow-sm backdrop-blur-sm">
+        <div className="flex items-center gap-3 bg-white/50 border border-black/10 rounded-full p-1 shadow-sm backdrop-blur-sm">
            <button 
              onClick={() => setDashboardMode('view')}
              className={`flex items-center gap-2 px-6 py-2 rounded-full text-[10px] font-black transition-all ${dashboardMode === 'view' ? 'bg-blue-900 text-white shadow-lg' : 'text-slate-500 hover:bg-black/5'}`}
@@ -121,6 +125,14 @@ const Dashboard: React.FC<DashboardProps> = ({ shipments, transactions, settings
              className={`flex items-center gap-2 px-6 py-2 rounded-full text-[10px] font-black transition-all ${dashboardMode === 'edit' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:bg-black/5'}`}
            >
               <Edit3 size={14}/> OPERATIONAL MODE
+           </button>
+           <div className="w-[1px] h-6 bg-black/10 mx-1"></div>
+           <button 
+             onClick={onToggleFullscreen}
+             className={`p-2 rounded-full transition-all ${isFullScreen ? 'bg-rose-600 text-white' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+             title={isFullScreen ? "Exit Fullscreen" : "Maximize Terminal"}
+           >
+              {isFullScreen ? <Minimize2 size={16}/> : <Maximize2 size={16}/>}
            </button>
         </div>
       </div>
@@ -138,7 +150,7 @@ const Dashboard: React.FC<DashboardProps> = ({ shipments, transactions, settings
           </div>
         </div>
         <div className="classic-body p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-1 ${isFullScreen ? 'md:grid-cols-4 lg:grid-cols-4' : 'md:grid-cols-4'} gap-4`}>
              <StatBox label={`TODAY (${stats.todayDate})`} value={stats.todayIndent} color="blue" subtitle="Current Day Indent" />
              <StatBox label="TOTAL INDENT" value={stats.totalIndent} color="black" subtitle="Lifetime Gross" />
              <StatBox label="TOTAL RECEIVED" value={stats.totalReceived} color="green" subtitle="Cumulative Collections" />
@@ -147,9 +159,9 @@ const Dashboard: React.FC<DashboardProps> = ({ shipments, transactions, settings
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 relative z-10">
+      <div className={`grid grid-cols-1 ${isFullScreen ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6 relative z-10`}>
          {/* Monthly Operational Status */}
-         <div className="classic-window">
+         <div className={`classic-window ${isFullScreen ? 'lg:col-span-1' : ''}`}>
            <div className="classic-title-bar">
              <span>MONTHLY PERFORMANCE SUMMARY [{new Date().toLocaleString('default', { month: 'long' }).toUpperCase()}]</span>
            </div>
@@ -178,10 +190,10 @@ const Dashboard: React.FC<DashboardProps> = ({ shipments, transactions, settings
          </div>
 
          {/* Recent Entries Terminal */}
-         <div className="classic-window">
+         <div className={`classic-window ${isFullScreen ? 'lg:col-span-2' : ''}`}>
            <div className="classic-title-bar"><span>SYSTEM JOURNAL (LATEST ACTIVITY)</span></div>
-           <div className="classic-body overflow-y-auto max-h-[280px] custom-scroll p-2 space-y-1">
-              {shipments.slice(0, 10).map(s => {
+           <div className={`classic-body overflow-y-auto ${isFullScreen ? 'max-h-[500px]' : 'max-h-[280px]'} custom-scroll p-2 space-y-1`}>
+              {shipments.slice(0, isFullScreen ? 20 : 10).map(s => {
                 const due = Number(s.totalIndent) - Number(s.paid || 0);
                 return (
                   <div key={s.id} className="flex justify-between items-center p-3 border-b border-black/5 bg-white text-[10px] font-mono group hover:bg-blue-50">
