@@ -86,10 +86,8 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
-  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString());
   const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSynced, setLastSynced] = useState<string | null>(localStorage.getItem('st_last_sync'));
 
   // Data States
   const [shipments, setShipments] = useState<Shipment[]>(() => JSON.parse(localStorage.getItem('st_shipments') || '[]'));
@@ -100,29 +98,25 @@ const App: React.FC = () => {
   const [depots, setDepots] = useState<Depot[]>(() => JSON.parse(localStorage.getItem('st_depots_list') || '[]'));
   const [prices, setPrices] = useState<PriceRate[]>(() => JSON.parse(localStorage.getItem('st_prices') || '[]'));
   const [trucks, setTrucks] = useState<TruckType[]>(() => JSON.parse(localStorage.getItem('st_trucks') || '[]'));
-  const [lists, setLists] = useState<ListData>(() => JSON.parse(localStorage.getItem('st_lists') || JSON.stringify({ ...DEFAULT_LISTS, subAccounts: ['Main', 'Salary', 'Rent'] })));
+  const [lists, setLists] = useState<ListData>(() => JSON.parse(localStorage.getItem('st_lists') || JSON.stringify({ ...DEFAULT_LISTS })));
   const [settings, setSettings] = useState<AppSettings>(() => JSON.parse(localStorage.getItem('st_settings') || JSON.stringify(DEFAULT_SETTINGS)));
   const [submittedInvoices, setSubmittedInvoices] = useState<string[]>(() => JSON.parse(localStorage.getItem('st_submitted_invoices') || '[]'));
 
-  // REFRESH & CLOUD HANDSHAKE ENGINE
+  // CLOUD SYNC ENGINE
   const performSync = useCallback(async (mode: 'PUSH' | 'PULL' = 'PUSH', silent = false) => {
-    if (!settings.googleSheetUrl || settings.googleSheetUrl.length < 10) {
-      if (!silent && mode === 'PULL') Swal.fire({ title: 'CLOUD OFFLINE', text: 'Please add your Google Web App URL in Settings.', icon: 'info' });
+    if (!settings.googleSheetUrl) {
+      if (!silent && mode === 'PULL') Swal.fire('NO CLOUD URL', 'Set Google Apps Script URL in Settings.', 'info');
       return;
     }
-    
     setIsSyncing(true);
     try {
       if (mode === 'PUSH') {
-        const payload = {
-          action: 'push',
-          data: { shipments, transactions, shippers, employees, buyers, depots, prices, trucks, lists, settings, submittedInvoices }
-        };
+        const payload = { action: 'push', data: { shipments, transactions, shippers, employees, buyers, depots, prices, trucks, lists, settings, submittedInvoices } };
         await fetch(settings.googleSheetUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
       } else {
         const response = await fetch(`${settings.googleSheetUrl}?action=pull`);
         const result = await response.json();
-        if (result && result.data) {
+        if (result?.data) {
           const d = result.data;
           if (d.shipments) setShipments(d.shipments);
           if (d.transactions) setTransactions(d.transactions);
@@ -136,29 +130,21 @@ const App: React.FC = () => {
           if (d.settings) setSettings(d.settings);
         }
       }
-      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      setLastSynced(now);
-      localStorage.setItem('st_last_sync', now);
-      if (!silent) Swal.fire({ title: mode === 'PULL' ? 'SYSTEM REFRESHED' : 'CLOUD UPDATED', icon: 'success', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
-    } catch (error) {
-      console.error('Sync Error:', error);
-      if (!silent) Swal.fire({ title: 'SYNC ERROR', text: 'Connection failed.', icon: 'error' });
+      if (!silent) Swal.fire({ title: 'SYNC COMPLETE', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+    } catch (e) {
+      console.error(e);
     } finally {
       setIsSyncing(false);
     }
   }, [settings.googleSheetUrl, shipments, transactions, shippers, employees, buyers, depots, prices, trucks, lists, settings, submittedInvoices]);
 
-  // Initial Full Refresh on Startup
-  useEffect(() => {
-    if (settings.googleSheetUrl) performSync('PULL', true);
-  }, []);
+  useEffect(() => { if (settings.googleSheetUrl) performSync('PULL', true); }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Save to local
   useEffect(() => {
     localStorage.setItem('st_shipments', JSON.stringify(shipments));
     localStorage.setItem('st_transactions', JSON.stringify(transactions));
@@ -174,17 +160,7 @@ const App: React.FC = () => {
     if (currentUser) localStorage.setItem('st_session', JSON.stringify(currentUser));
   }, [shipments, transactions, shippers, employees, buyers, depots, prices, trucks, lists, settings, submittedInvoices, currentUser]);
 
-  const handleLogin = (name: string, role: 'Admin' | 'Operator', id: string) => {
-    setCurrentUser({ name, role, id });
-    setActiveTab('dashboard');
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('st_session');
-  };
-
-  if (!currentUser) return <Login employees={employees} onLogin={handleLogin} />;
+  if (!currentUser) return <Login employees={employees} onLogin={(name, role, id) => setCurrentUser({ name, role, id })} />;
 
   const isAdmin = currentUser.role === 'Admin';
   const userShipments = isAdmin ? shipments : shipments.filter(s => s.employeeName === currentUser.name);
@@ -193,7 +169,6 @@ const App: React.FC = () => {
     <div className={`flex h-screen overflow-hidden ${settings.theme === 'dark' ? 'dark' : ''}`} style={{ fontSize: `${settings.textSize}px`, fontFamily: settings.fontFamily }}>
       <div className="fixed inset-0 z-[-1] bg-cover bg-center brightness-[0.25]" style={{ backgroundImage: `url(${settings.wallpaper})` }}></div>
       
-      {/* FULL SIDEBAR RESTORED */}
       <aside className={`${isSidebarOpen ? 'w-72' : 'w-20'} transition-all duration-300 flex flex-col h-full text-slate-300 shadow-2xl z-50 border-r border-white/5 overflow-hidden`} style={{ background: `linear-gradient(180deg, ${settings.sidebarColor} 0%, #020617 100%)` }}>
         <div className="h-16 flex items-center px-4 border-b border-white/5 bg-black/20 gap-4">
           <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg ring-1 ring-white/20">
@@ -202,45 +177,44 @@ const App: React.FC = () => {
           {isSidebarOpen && <h1 className="font-black uppercase tracking-tight text-[15px] text-white truncate">{settings.appName}</h1>}
         </div>
 
-        <nav className="flex-1 overflow-y-auto custom-scroll px-3 space-y-5 py-6">
+        <nav className="flex-1 overflow-y-auto custom-scroll px-3 space-y-4 py-6">
           <Section label="CORE ENGINE" isOpen={isSidebarOpen}>
-            <NavItem icon={<LayoutDashboard size={18}/>} label="DASHBOARD HUB" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+            <NavItem icon={<LayoutDashboard size={18}/>} label="DASHBOARD" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
             {isAdmin && <NavItem icon={<Wallet size={18}/>} label="ACCOUNT MASTER" active={activeTab === 'account_info'} onClick={() => setActiveTab('account_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
-            <NavItem icon={<FileText size={18}/>} label="EXPORT LEDGER" active={activeTab === 'live_sheet'} onClick={() => setActiveTab('live_sheet')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+            <NavItem icon={<FileText size={18}/>} label="SHIPMENT LOG" active={activeTab === 'live_sheet'} onClick={() => setActiveTab('live_sheet')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
             <NavItem icon={<Database size={18}/>} label="MASTER ARCHIVE" active={activeTab === 'master_sheet'} onClick={() => setActiveTab('master_sheet')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
           </Section>
 
           <Section label="LOGISTICS MGMT" isOpen={isSidebarOpen}>
-            <NavItem icon={<UserPlus size={18}/>} label="NEW SHIPMENT" active={activeTab === 'employee_entry'} onClick={() => setActiveTab('employee_entry')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+            <NavItem icon={<UserPlus size={18}/>} label="NEW ENTRY" active={activeTab === 'employee_entry'} onClick={() => setActiveTab('employee_entry')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
             {isAdmin && <NavItem icon={<FileCheck size={18}/>} label="BILL SETTLEMENT" active={activeTab === 'bill_submission'} onClick={() => setActiveTab('bill_submission')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
-            <NavItem icon={<Clock size={18}/>} label="PENDING INDENTS" active={activeTab === 'pending_indent'} onClick={() => setActiveTab('pending_indent')} isOpen={isSidebarOpen} badge={userShipments.filter(s => (s.totalIndent - s.paid) > 0.01).length} radius={settings.boxRadius} />
-            <NavItem icon={<TruckIcon size={18}/>} label="FLEET LOGISTICS" active={activeTab === 'trucks'} onClick={() => setActiveTab('trucks')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+            <NavItem icon={<Clock size={18}/>} label="PENDING BILLS" active={activeTab === 'pending_indent'} onClick={() => setActiveTab('pending_indent')} isOpen={isSidebarOpen} badge={userShipments.filter(s => (s.totalIndent - s.paid) > 0.01).length} radius={settings.boxRadius} />
+            <NavItem icon={<TruckIcon size={18}/>} label="FLEET LOGS" active={activeTab === 'trucks'} onClick={() => setActiveTab('trucks')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
           </Section>
 
           {isAdmin && (
             <Section label="REGISTRY & CONTROL" isOpen={isSidebarOpen}>
-              <NavItem icon={<ShieldCheck size={18}/>} label="USER AUTH SYSTEM" active={activeTab === 'user_mgmt'} onClick={() => setActiveTab('user_mgmt')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              <NavItem icon={<ShieldCheck size={18}/>} label="USER AUTH" active={activeTab === 'user_mgmt'} onClick={() => setActiveTab('user_mgmt')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
               <NavItem icon={<Anchor size={18}/>} label="SHIPPER LIST" active={activeTab === 'manage_shippers'} onClick={() => setActiveTab('manage_shippers')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-              <NavItem icon={<Tag size={18}/>} label="BUYER DIRECTORY" active={activeTab === 'manage_buyers'} onClick={() => setActiveTab('manage_buyers')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-              <NavItem icon={<Layers size={18}/>} label="DEPOT REGISTRY" active={activeTab === 'manage_depots'} onClick={() => setActiveTab('manage_depots')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-              <NavItem icon={<Users size={18}/>} label="OPERATOR MGMT" active={activeTab === 'manage_employees'} onClick={() => setActiveTab('manage_employees')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-              <NavItem icon={<DollarSign size={18}/>} label="PRICE RULE ENGINE" active={activeTab === 'manage_prices'} onClick={() => setActiveTab('manage_prices')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              <NavItem icon={<Tag size={18}/>} label="BUYER LIST" active={activeTab === 'manage_buyers'} onClick={() => setActiveTab('manage_buyers')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              <NavItem icon={<Layers size={18}/>} label="DEPOT LIST" active={activeTab === 'manage_depots'} onClick={() => setActiveTab('manage_depots')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              <NavItem icon={<Users size={18}/>} label="OPERATORS" active={activeTab === 'manage_employees'} onClick={() => setActiveTab('manage_employees')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+              <NavItem icon={<DollarSign size={18}/>} label="PRICE RULES" active={activeTab === 'manage_prices'} onClick={() => setActiveTab('manage_prices')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
               <NavItem icon={<PlusCircle size={18}/>} label="SUB ACCOUNTS" active={activeTab === 'sub_accounts'} onClick={() => setActiveTab('sub_accounts')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
             </Section>
           )}
 
-          <Section label="UTILITY SERVICES" isOpen={isSidebarOpen}>
-            {isAdmin && <NavItem icon={<Settings2 size={18}/>} label="SYSTEM CODES" active={activeTab === 'export_import'} onClick={() => setActiveTab('export_import')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
-            <NavItem icon={<Info size={18}/>} label="EXPORT INTELLIGENCE" active={activeTab === 'export_info'} onClick={() => setActiveTab('export_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
-            <NavItem icon={<ClipboardList size={18}/>} label="ASSOCIATION FEE" active={activeTab === 'association_info'} onClick={() => setActiveTab('association_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+          <Section label="SERVICES" isOpen={isSidebarOpen}>
+            <NavItem icon={<Info size={18}/>} label="INTELLIGENCE" active={activeTab === 'export_info'} onClick={() => setActiveTab('export_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
+            <NavItem icon={<ClipboardList size={18}/>} label="ASSOCIATION" active={activeTab === 'association_info'} onClick={() => setActiveTab('association_info')} isOpen={isSidebarOpen} radius={settings.boxRadius} />
             {isAdmin && <NavItem icon={<Briefcase size={18}/>} label="FINANCE PRO" active={activeTab === 'finance_pro'} onClick={() => setActiveTab('finance_pro')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
-            {isAdmin && <NavItem icon={<Settings size={18}/>} label="CONFIG SETTINGS" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
+            {isAdmin && <NavItem icon={<Settings size={18}/>} label="SETTINGS" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} isOpen={isSidebarOpen} radius={settings.boxRadius} />}
           </Section>
         </nav>
 
         <div className="p-4 border-t border-white/5 bg-black/40">
-          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-3 bg-rose-600/10 hover:bg-rose-600 text-rose-500 hover:text-white p-3 transition-all font-black text-xs" style={{ borderRadius: settings.boxRadius }}>
-            <LogOut size={16}/> {isSidebarOpen && "TERMINATE SESSION"}
+          <button onClick={() => { setCurrentUser(null); localStorage.removeItem('st_session'); }} className="w-full flex items-center justify-center gap-3 bg-rose-600/10 hover:bg-rose-600 text-rose-500 hover:text-white p-3 transition-all font-black text-xs" style={{ borderRadius: settings.boxRadius }}>
+            <LogOut size={16}/> {isSidebarOpen && "EXIT SYSTEM"}
           </button>
         </div>
       </aside>
@@ -252,13 +226,9 @@ const App: React.FC = () => {
             <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-800">{activeTab.replace('_', ' ')} TERMINAL</h2>
           </div>
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => performSync('PULL')} 
-              disabled={isSyncing}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${isSyncing ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}
-            >
+            <button onClick={() => performSync('PULL')} disabled={isSyncing} className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${isSyncing ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}>
               <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-              <span className="text-[9px] font-black uppercase">{isSyncing ? 'Refreshing...' : 'REFRESH UPDATES'}</span>
+              <span className="text-[9px] font-black uppercase">{isSyncing ? 'Syncing...' : 'REFRESH UPDATES'}</span>
             </button>
             <div className="bg-white/60 rounded-full px-5 py-1.5 ring-1 ring-white font-mono font-black text-[12px]">{currentTime}</div>
           </div>
@@ -281,7 +251,6 @@ const App: React.FC = () => {
               case 'manage_depots': return <ManageDepots depots={depots} setDepots={setDepots} {...commonProps} />;
               case 'manage_employees': return <ManageEmployees employees={employees} setEmployees={setEmployees} {...commonProps} />;
               case 'manage_prices': return <ManagePrices prices={prices} setPrices={setPrices} {...commonProps} />;
-              case 'export_import': return <ExportImport refData={{ countries: [], hsCodes: [], buyers: [], depots: [], forwarders: [] }} setRefData={() => {}} />;
               case 'export_info': return <ExportInfo shipments={userShipments} />;
               case 'association_info': return <AssociationInfo shipments={shipments} setShipments={setShipments} {...commonProps} />;
               case 'finance_pro': return <SpecialAccounts transactions={transactions} setTransactions={setTransactions} lists={lists} {...commonProps} />;
