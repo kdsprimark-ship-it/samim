@@ -1,196 +1,106 @@
 
 import React, { useState } from 'react';
-import { Scissors, Search, Trash2, Clipboard, Plus, Settings } from 'lucide-react';
+import { Scissors, Search, Trash2, Clipboard, Plus, Settings, Activity } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { DepotMapping } from '../types';
 
 interface CutoffAnalyzerProps {
   mappings: DepotMapping[];
   setMappings: React.Dispatch<React.SetStateAction<DepotMapping[]>>;
+  swalSize: number;
 }
 
-const CutoffAnalyzer: React.FC<CutoffAnalyzerProps> = ({ mappings, setMappings }) => {
+const CutoffAnalyzer: React.FC<CutoffAnalyzerProps> = ({ mappings, setMappings, swalSize }) => {
   const [inputText, setInputText] = useState('');
-  const [results, setResults] = useState<{ [key: string]: number }>({
-    VERTEX: 0,
-    OCL: 0,
-    SAPL: 0,
-    KDS: 0
-  });
-  const isDark = document.documentElement.classList.contains('dark');
+  const [results, setResults] = useState<{ [key: string]: number }>({ VERTEX: 0, OCL: 0, SAPL: 0, KDS: 0 });
 
   const analyzeText = () => {
     const text = inputText.toUpperCase();
     let counts = { VERTEX: 0, OCL: 0, SAPL: 0, KDS: 0 };
-    
-    // Normalize text: remove everything except alphanumeric and spaces
-    const normalized = text.replace(/\(.*\)/g, ' ').replace(/[^A-Z0-9\s]/g, ' '); 
-    const words = normalized.split(/\s+/);
-    
+    const words = text.replace(/[^A-Z0-9\s]/g, ' ').split(/\s+/);
     words.forEach(word => {
-      let cleanWord = word.replace(/[^A-Z0-9]/g, ''); 
-      if (!cleanWord) return;
-      
-      // Explicit depot mentions
-      if (cleanWord === 'VERTEX') { counts.VERTEX++; return; }
-      if (cleanWord.includes('OCL')) { counts.OCL++; return; }
-      if (cleanWord.includes('SAPL')) { counts.SAPL++; return; }
-      if (cleanWord.includes('KDS')) { counts.KDS++; return; }
-
-      // Map codes to depots from dynamic mappings
-      const mapping = mappings.find(m => cleanWord.startsWith(m.c));
-      if (mapping && counts.hasOwnProperty(mapping.d)) {
-        counts[mapping.d as keyof typeof counts]++;
-      }
+      const mapping = mappings.find(m => word.startsWith(m.c));
+      if (mapping && counts.hasOwnProperty(mapping.d)) counts[mapping.d as keyof typeof counts]++;
     });
-
     setResults(counts);
   };
 
   const handleManageCodes = async () => {
     const { value: action } = await Swal.fire({
-      title: 'Manage Depot Mappings',
+      title: 'MAPPING CONFIGURATION',
       input: 'radio',
-      inputOptions: {
-        'view': 'View Existing Mappings',
-        'add': 'Add New Mapping'
-      },
-      showCancelButton: true,
-      confirmButtonColor: '#3b82f6',
-      background: isDark ? '#1a202c' : '#ffffff',
-      color: isDark ? '#e2e8f0' : '#4a5568',
+      inputOptions: { 'view': 'View Current Mappings', 'add': 'Add New Code Mapping' },
+      width: swalSize,
+      customClass: { popup: 'classic-swal' },
+      confirmButtonText: 'SELECT'
     });
-
+    
     if (action === 'add') {
-      const { value: formValues } = await Swal.fire({
-        title: 'New Mapping',
+      const { value: form } = await Swal.fire({
+        title: 'NEW DEPOT MAPPING',
         html: `
-          <input id="code-input" class="swal2-input" placeholder="Code (e.g. USW999)">
-          <select id="depot-select" class="swal2-input">
-            <option value="VERTEX">VERTEX</option>
-            <option value="OCL">OCL</option>
-            <option value="SAPL">SAPL</option>
-            <option value="KDS">KDS</option>
-          </select>
+          <div class="text-left space-y-3">
+            <div><label class="text-[10px] font-bold">Consignee Code Prefix:</label><input id="c" class="classic-input w-full h-10" placeholder="e.g. PA"></div>
+            <div><label class="text-[10px] font-bold">Target Depot Name:</label><input id="d" class="classic-input w-full h-10" placeholder="e.g. VERTEX"></div>
+          </div>
         `,
-        focusConfirm: false,
-        preConfirm: () => {
-          return {
-            c: (document.getElementById('code-input') as HTMLInputElement).value.toUpperCase(),
-            d: (document.getElementById('depot-select') as HTMLSelectElement).value
-          }
-        }
+        width: swalSize,
+        showCancelButton: true,
+        confirmButtonText: 'SAVE MAPPING',
+        customClass: { popup: 'classic-swal' },
+        preConfirm: () => ({ c: (document.getElementById('c') as any).value, d: (document.getElementById('d') as any).value })
       });
-
-      if (formValues && formValues.c) {
-        setMappings(prev => [...prev, formValues]);
-        Swal.fire('Added!', `Code ${formValues.c} mapped to ${formValues.d}`, 'success');
-      }
+      if (form?.c) setMappings(p => [...p, form]);
     } else if (action === 'view') {
-      let tableHtml = `<div class="text-left overflow-y-auto max-h-[300px]"><table class="w-full text-xs"><thead><tr class="font-bold border-b"><th>Code</th><th>Depot</th></tr></thead><tbody>`;
-      mappings.slice().reverse().forEach(m => {
-        tableHtml += `<tr class="border-b"><td>${m.c}</td><td>${m.d}</td></tr>`;
-      });
-      tableHtml += `</tbody></table></div>`;
       Swal.fire({
-        title: 'Current Mappings',
-        html: tableHtml,
-        confirmButtonColor: '#3b82f6'
+        title: 'ACTIVE MAPPING CODES',
+        html: `<div class="text-left h-64 overflow-y-auto font-mono text-[11px] p-2 bg-white border border-black/10">
+          ${mappings.map(m => `<div class="flex justify-between border-b py-1"><span>${m.c}</span><span class="font-bold">${m.d}</span></div>`).join('')}
+        </div>`,
+        width: swalSize,
+        customClass: { popup: 'classic-swal' }
       });
-    }
-  };
-
-  const clearAll = () => {
-    setInputText('');
-    setResults({ VERTEX: 0, OCL: 0, SAPL: 0, KDS: 0 });
-  };
-
-  const pasteFromClipboard = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      setInputText(text);
-    } catch (err) {
-      console.error('Failed to read clipboard');
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <Scissors className="text-pink-500" />
-          <h3 className="text-2xl font-bold">H&M Cutoff Data Analyzer</h3>
+    <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
+      <div className="classic-info-bar rounded">
+        <div className="flex items-center gap-2 text-pink-700 font-bold text-xs uppercase">
+          <Scissors size={14} /> H&M CUTOFF ANALYZER ENGINE
         </div>
-        <button 
-          onClick={handleManageCodes}
-          className="neu-panel px-4 py-2 text-[10px] font-bold text-blue-500 flex items-center gap-2 hover:neu-inset transition-all"
-        >
-          <Settings size={14} /> MANAGE CODES
+        <div className="flex-1"></div>
+        <button onClick={handleManageCodes} className="classic-btn flex items-center gap-2">
+          <Settings size={12} /> CONFIG MAPPINGS
         </button>
       </div>
 
-      <div className="neu-panel p-8 space-y-6">
-        <div>
-          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
-            Paste Cutoff Data Text Here
-          </label>
-          <div className="relative">
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="e.g. VERTEX, OCL (Code 1), SAPL, USW022, GBD001..."
-              className="w-full h-48 neu-inset bg-transparent border-none rounded-2xl p-6 font-mono text-sm focus:ring-2 focus:ring-blue-500/50 outline-none transition-all custom-scroll"
-            />
-            <div className="absolute bottom-4 right-4 flex gap-2">
-              <button 
-                onClick={pasteFromClipboard}
-                className="p-3 bg-white/10 rounded-xl hover:bg-blue-500/20 text-blue-500 transition-all"
-                title="Paste from Clipboard"
-              >
-                <Clipboard size={18} />
-              </button>
-              <button 
-                onClick={clearAll}
-                className="p-3 bg-white/10 rounded-xl hover:bg-red-500/20 text-red-500 transition-all"
-                title="Clear All"
-              >
-                <Trash2 size={18} />
-              </button>
+      <div className="classic-window">
+        <div className="classic-title-bar"><span>DATA INPUT TERMINAL - PASTE CARGO DETAILS</span></div>
+        <div className="classic-body p-6 space-y-4">
+          <textarea 
+            value={inputText} 
+            onChange={e => setInputText(e.target.value)} 
+            className="classic-input w-full h-64 p-4 font-mono text-[12px] bg-white" 
+            placeholder="System awaiting cargo data stream..."
+          />
+          <button onClick={analyzeText} className="classic-btn w-full py-4 bg-pink-700 text-white border-pink-900 font-black text-sm flex items-center justify-center gap-3">
+            <Activity size={18} /> RUN ANALYSIS HEURISTICS
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {Object.entries(results).map(([depot, count]) => (
+          <div key={depot} className="classic-window">
+            <div className="classic-title-bar !bg-gray-700"><span>{depot}</span></div>
+            <div className="p-6 text-center bg-white border border-black/5">
+              <p className="text-4xl font-black font-mono">{count}</p>
+              <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">Assignments</p>
             </div>
           </div>
-        </div>
-
-        <button 
-          onClick={analyzeText}
-          className="w-full btn-neon py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-3"
-        >
-          <Search size={20} />
-          START ANALYSIS
-        </button>
+        ))}
       </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <DepotResultCard name="VERTEX" count={results.VERTEX} color="purple" />
-        <DepotResultCard name="OCL" count={results.OCL} color="blue" />
-        <DepotResultCard name="SAPL" count={results.SAPL} color="green" />
-        <DepotResultCard name="KDS" count={results.KDS} color="orange" />
-      </div>
-    </div>
-  );
-};
-
-const DepotResultCard = ({ name, count, color }: { name: string; count: number; color: string }) => {
-  const colorClasses = {
-    purple: "text-purple-600 border-purple-400 bg-purple-50/50",
-    blue: "text-blue-600 border-blue-400 bg-blue-50/50",
-    green: "text-green-600 border-green-400 bg-green-50/50",
-    orange: "text-orange-600 border-orange-400 bg-orange-50/50",
-  }[color as 'purple' | 'blue' | 'green' | 'orange'];
-
-  return (
-    <div className={`neu-panel p-6 text-center border-t-4 ${colorClasses}`}>
-      <p className="text-[10px] font-bold uppercase tracking-tighter opacity-60 mb-2">{name}</p>
-      <div className="text-4xl font-bold font-orbitron">{count}</div>
     </div>
   );
 };

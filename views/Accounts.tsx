@@ -7,7 +7,16 @@ import {
   Plus, 
   Search, 
   History,
-  CheckCircle2
+  Printer,
+  X,
+  Search as SearchIcon,
+  Edit2,
+  Trash2,
+  Calculator,
+  FileCheck,
+  TrendingUp,
+  CreditCard,
+  DollarSign
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { Transaction, Shipment } from '../types';
@@ -19,6 +28,7 @@ interface AccountsProps {
   setShipments: React.Dispatch<React.SetStateAction<Shipment[]>>;
   submittedInvoices: string[];
   setSubmittedInvoices: React.Dispatch<React.SetStateAction<string[]>>;
+  swalSize: number;
 }
 
 const Accounts: React.FC<AccountsProps> = ({ 
@@ -27,62 +37,72 @@ const Accounts: React.FC<AccountsProps> = ({
   setTransactions, 
   setShipments, 
   submittedInvoices,
-  setSubmittedInvoices
+  setSubmittedInvoices,
+  swalSize
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const isDark = document.documentElement.classList.contains('dark');
+  const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [submitAmount, setSubmitAmount] = useState<string>('');
 
-  const stats = useMemo(() => {
-    // Total Billed = Base Indent + (Doc Count * 165 TK)
-    const totalBilled = shipments.reduce((acc, s) => acc + (Number(s.totalIndent || 0)) + (Number(s.docQty || 0) * 165), 0);
-    
-    // Total Collection = Direct payments on jobs + Cash In entries
-    const totalPaidInShipments = shipments.reduce((acc, s) => acc + Number(s.paid || 0), 0);
-    const cashIn = transactions.filter(t => t.type === 'Cash In').reduce((a, b) => a + b.amount, 0);
-    const cashOut = transactions.filter(t => t.type === 'Cash Out').reduce((a, b) => a + b.amount, 0);
+  const officeStats = useMemo(() => {
+    // 1. Auto Income Calculation Logic
+    // Rate: 75 if Buyer is H&M, else 80 per Doc Qty
+    const autoIncome = shipments.reduce((acc, s) => {
+      const rate = s.buyer && s.buyer.includes('H&M') ? 75 : 80;
+      return acc + (Number(s.docQty || 0) * rate);
+    }, 0);
 
-    const totalCollection = totalPaidInShipments + cashIn;
-    const outstanding = totalBilled - totalCollection + cashOut;
+    // 2. Manual Transactions
+    const manualIncome = transactions.filter(t => t.type === 'Cash In').reduce((a, b) => a + b.amount, 0);
+    const totalOfficeIncome = autoIncome + manualIncome;
+    const totalOfficeCost = transactions.filter(t => t.type === 'Cash Out').reduce((a, b) => a + b.amount, 0);
+    const officeDue = totalOfficeIncome - totalOfficeCost;
 
-    return {
-      totalBilled,
-      totalCollection,
-      outstanding,
-      cashOut
-    };
+    return { totalOfficeIncome, totalOfficeCost, officeDue, autoIncome, manualIncome };
   }, [shipments, transactions]);
 
-  const handleNewTransaction = async () => {
+  const handlePostTransaction = async (type: 'Cash In' | 'Cash Out') => {
     const { value: formValues } = await Swal.fire({
-      title: 'New Cash Transaction',
+      title: `POST OFFICE ${type.toUpperCase()}`,
       html: `
-        <div class="space-y-4">
-          <select id="t-type" class="swal2-input w-full">
-            <option value="Cash In">Cash In (Revenue)</option>
-            <option value="Cash Out">Cash Out (Expense)</option>
-          </select>
-          <input id="t-category" class="swal2-input" placeholder="Category (e.g. Office Rent, Salary)">
-          <input id="t-desc" class="swal2-input" placeholder="Description">
-          <input id="t-amount" type="number" class="swal2-input" placeholder="Amount (TK)">
+        <div class="space-y-4 text-left">
+          <div>
+            <label class="text-[10px] font-bold block mb-1">TRANSACTION CATEGORY:</label>
+            <select id="t-cat" class="classic-input w-full h-10 font-bold">
+              ${type === 'Cash In' ? `
+                <option value="Manual Billing">MANUAL BILLING</option>
+                <option value="Misc Income">MISC INCOME</option>
+                <option value="Commission">COMMISSION</option>
+              ` : `
+                <option value="Office Rent">OFFICE RENT</option>
+                <option value="Electricity">ELECTRICITY</option>
+                <option value="Stationary">STATIONARY</option>
+                <option value="Staff Salary">STAFF SALARY</option>
+                <option value="Maintenance">MAINTENANCE</option>
+                <option value="Tea & Snacks">TEA & SNACKS</option>
+                <option value="Conveyance">CONVEYANCE</option>
+              `}
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] font-bold block mb-1">AMOUNT (TK):</label>
+            <input id="t-amt" type="number" class="classic-input w-full h-10 font-black text-lg" placeholder="0.00">
+          </div>
+          <div>
+            <label class="text-[10px] font-bold block mb-1">REMARKS / DESCRIPTION:</label>
+            <input id="t-rem" class="classic-input w-full h-10" placeholder="Details...">
+          </div>
         </div>
       `,
-      focusConfirm: false,
       showCancelButton: true,
-      confirmButtonText: 'Record Transaction',
-      confirmButtonColor: '#3b82f6',
-      background: isDark ? '#1a202c' : '#ffffff',
-      color: isDark ? '#e2e8f0' : '#4a5568',
+      confirmButtonText: 'COMMIT TO LEDGER',
+      width: swalSize,
+      customClass: { popup: 'classic-swal' },
       preConfirm: () => {
-        const type = (document.getElementById('t-type') as HTMLSelectElement).value;
-        const category = (document.getElementById('t-category') as HTMLInputElement).value;
-        const description = (document.getElementById('t-desc') as HTMLInputElement).value;
-        const amount = parseFloat((document.getElementById('t-amount') as HTMLInputElement).value);
-
-        if (!category || isNaN(amount)) {
-          Swal.showValidationMessage('Please enter valid category and amount');
-          return false;
-        }
-        return { type, category, description, amount };
+        const category = (document.getElementById('t-cat') as HTMLSelectElement).value;
+        const amount = parseFloat((document.getElementById('t-amt') as HTMLInputElement).value);
+        const remarks = (document.getElementById('t-rem') as HTMLInputElement).value;
+        if (!amount || isNaN(amount)) return Swal.showValidationMessage('Valid Amount Required');
+        return { category, amount, remarks };
       }
     });
 
@@ -90,221 +110,216 @@ const Accounts: React.FC<AccountsProps> = ({
       const newT: Transaction = {
         id: Date.now().toString(),
         date: new Date().toISOString().split('T')[0],
-        ...formValues
+        type,
+        category: formValues.category,
+        description: formValues.remarks,
+        amount: formValues.amount
       };
       setTransactions(prev => [newT, ...prev]);
-      Swal.fire({
-        title: 'Success!',
-        text: 'Transaction recorded successfully.',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false,
-        background: isDark ? '#1a202c' : '#ffffff',
-        color: isDark ? '#e2e8f0' : '#4a5568',
-      });
+      Swal.fire({ title: 'POSTED', icon: 'success', timer: 800, showConfirmButton: false, customClass: { popup: 'classic-swal' } });
     }
   };
 
-  const handleSubmitBill = async () => {
-    const { value: billData } = await Swal.fire({
-      title: 'Submit Bill & Finalize Payment',
-      html: `
-        <div class="space-y-4">
-          <p class="text-xs text-gray-400 font-bold mb-2 uppercase tracking-widest">Mark Invoice as Submitted (RED)</p>
-          <input id="bill-inv" class="swal2-input" placeholder="Invoice Number (e.g. INV-2024-001)">
-          <input id="bill-amt" type="number" class="swal2-input" placeholder="Collection Amount (TK)">
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Submit & Reduce Due',
-      confirmButtonColor: '#ef4444',
-      background: isDark ? '#1a202c' : '#ffffff',
-      color: isDark ? '#e2e8f0' : '#4a5568',
-      preConfirm: () => {
-        const inv = (document.getElementById('bill-inv') as HTMLInputElement).value.trim();
-        const amt = parseFloat((document.getElementById('bill-amt') as HTMLInputElement).value);
-        if (!inv || isNaN(amt)) {
-          Swal.showValidationMessage('Invoice No and Amount are required');
-          return false;
-        }
-        return { inv, amt };
+  const invoiceMatch = useMemo(() => {
+    if (!invoiceSearch) return null;
+    const matches = shipments.filter(s => s.invoiceNo.toUpperCase().includes(invoiceSearch.toUpperCase()));
+    if (matches.length === 0) return null;
+    
+    // Filter out already submitted ones if requested, but user said "akdik invoice number thakla sabmite bill gulo show korba na dew bill gulo show korb"
+    const pendingMatches = matches.filter(m => !submittedInvoices.includes(m.invoiceNo));
+    return pendingMatches.length > 0 ? pendingMatches[0] : matches[0];
+  }, [invoiceSearch, shipments, submittedInvoices]);
+
+  const handleBillSubmit = () => {
+    const amt = parseFloat(submitAmount);
+    if (!invoiceMatch) return;
+    if (isNaN(amt) || amt <= 0) {
+      Swal.fire({ title: 'ERROR', text: 'Enter valid amount to submit.', icon: 'error', width: swalSize, customClass: { popup: 'classic-swal' } });
+      return;
+    }
+
+    setShipments(prev => prev.map(s => {
+      if (s.invoiceNo === invoiceMatch.invoiceNo) {
+        return { ...s, paid: (Number(s.paid || 0) + amt) };
       }
-    });
+      return s;
+    }));
 
-    if (billData) {
-      // 1. Add to submitted list to turn text red in DIST_LOG
-      setSubmittedInvoices(prev => [...new Set([...prev, billData.inv.toUpperCase()])]);
-
-      // 2. Add as a Cash In transaction to reduce Outstanding Due
-      const newT: Transaction = {
-        id: Date.now().toString(),
-        date: new Date().toISOString().split('T')[0],
-        type: 'Cash In',
-        category: 'Bill Collection',
-        description: `Full/Partial Payment for Invoice ${billData.inv.toUpperCase()}`,
-        amount: billData.amt,
-        invoiceNo: billData.inv.toUpperCase()
-      };
-      setTransactions(prev => [newT, ...prev]);
-
-      Swal.fire({
-        title: 'Bill Processed!',
-        html: `<p>Invoice <b>${billData.inv.toUpperCase()}</b> marked as red.<br/>Outstanding reduced by <b>TK ${billData.amt.toLocaleString()}</b>.</p>`,
-        icon: 'success',
-        background: isDark ? '#1a202c' : '#ffffff',
-        color: isDark ? '#e2e8f0' : '#4a5568',
-      });
+    if (!submittedInvoices.includes(invoiceMatch.invoiceNo)) {
+       setSubmittedInvoices(prev => [...prev, invoiceMatch.invoiceNo]);
     }
-  };
 
-  const handleDeleteTransaction = async (id: string) => {
-    const result = await Swal.fire({
-      title: 'Delete Transaction?',
-      text: "This will revert the balance change.",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      confirmButtonText: 'Yes, delete',
-      background: isDark ? '#1a202c' : '#ffffff',
-      color: isDark ? '#e2e8f0' : '#4a5568',
+    setInvoiceSearch('');
+    setSubmitAmount('');
+    Swal.fire({ 
+      title: 'BILL POSTED', 
+      text: `TK ${amt.toLocaleString()} received for ${invoiceMatch.invoiceNo}`, 
+      icon: 'success', 
+      timer: 1500, 
+      showConfirmButton: false, 
+      customClass: { popup: 'classic-swal' }
     });
-
-    if (result.isConfirmed) {
-      setTransactions(prev => prev.filter(t => t.id !== id));
-      Swal.fire({
-        title: 'Deleted',
-        icon: 'success',
-        timer: 1000,
-        showConfirmButton: false,
-        background: isDark ? '#1a202c' : '#ffffff',
-        color: isDark ? '#e2e8f0' : '#4a5568',
-      });
-    }
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Finance Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <FinanceCard 
-          label="Total Billed" 
-          value={stats.totalBilled.toLocaleString()} 
-          icon={<Wallet className="text-blue-500" />} 
-          color="blue" 
-          detail="Includes 165 TK/Doc"
-        />
-        <FinanceCard 
-          label="Total Collected" 
-          value={stats.totalCollection.toLocaleString()} 
-          icon={<ArrowUpCircle className="text-green-500" />} 
-          color="green" 
-          detail="All Income Sources"
-        />
-        <FinanceCard 
-          label="Outstanding Due" 
-          value={stats.outstanding.toLocaleString()} 
-          icon={<ArrowDownCircle className="text-red-500" />} 
-          color="red" 
-          detail="Net Receivable"
-        />
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="flex gap-3">
-          <button 
-            onClick={handleNewTransaction}
-            className="btn-neon px-8 py-4 rounded-2xl text-white font-bold flex items-center gap-3 shadow-xl"
-          >
-            <Plus size={20} /> NEW TRANSACTION
-          </button>
-          <button 
-            onClick={handleSubmitBill}
-            className="neu-panel px-8 py-4 rounded-2xl text-red-500 font-bold hover:neu-inset border-2 border-red-500/10 flex items-center gap-3 transition-all"
-          >
-            <CheckCircle2 size={20} /> SUBMIT BILL (INV RED)
-          </button>
+    <div className="space-y-6 animate-fadeIn pb-20 max-w-6xl mx-auto">
+      {/* 1. Office Info Stats */}
+      <div className="classic-window">
+        <div className="classic-title-bar">
+          <div className="flex items-center gap-2">
+            <TrendingUp size={12}/>
+            <span>OFFICE FINANCIAL RECAP & INCOME ANALYSIS</span>
+          </div>
         </div>
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search Accounts Records..." 
-            className="w-full pl-12 pr-4 py-4 neu-inset bg-transparent border-none rounded-2xl text-sm outline-none"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="classic-body p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="classic-inset p-4 bg-white border-l-4 border-green-600">
+              <p className="text-[9px] font-bold text-gray-500 uppercase">TOTAL OFFICE INCOME</p>
+              <h3 className="text-3xl font-black font-mono text-green-700">TK {officeStats.totalOfficeIncome.toLocaleString()}</h3>
+              <div className="flex justify-between mt-2 text-[8px] font-bold text-gray-400 border-t pt-1">
+                <span>AUTO (DOCS): {officeStats.autoIncome.toLocaleString()}</span>
+                <span>MISC: {officeStats.manualIncome.toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="classic-inset p-4 bg-white border-l-4 border-red-600">
+              <p className="text-[9px] font-bold text-gray-500 uppercase">TOTAL OFFICE COST</p>
+              <h3 className="text-3xl font-black font-mono text-red-700">TK {officeStats.totalOfficeCost.toLocaleString()}</h3>
+              <p className="text-[8px] font-bold text-gray-400 mt-2 uppercase italic">Operations & Overheads</p>
+            </div>
+            <div className="classic-inset p-4 bg-white border-l-4 border-blue-600">
+              <p className="text-[9px] font-bold text-gray-500 uppercase">OFFICE DUE BALANCE</p>
+              <h3 className="text-3xl font-black font-mono text-blue-800">TK {officeStats.officeDue.toLocaleString()}</h3>
+              <p className="text-[8px] font-bold text-gray-400 mt-2 uppercase">Net Profitability</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Transaction Table */}
-      <div className="neu-panel overflow-hidden">
-        <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 font-bold text-sm bg-gray-50/50 dark:bg-gray-900/20">
-          <History size={18} className="text-blue-500" /> Recent Activity Log
-        </div>
-        <div className="overflow-x-auto custom-scroll">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-100 dark:bg-gray-900/50 text-[10px] uppercase font-bold text-gray-400 tracking-widest">
-                <th className="p-5">Date</th>
-                <th className="p-5">Type</th>
-                <th className="p-5">Category</th>
-                <th className="p-5">Description</th>
-                <th className="p-5 text-right">Amount</th>
-                <th className="p-5 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {transactions.filter(t => t.description.toLowerCase().includes(searchTerm.toLowerCase()) || t.category.toLowerCase().includes(searchTerm.toLowerCase())).map(t => (
-                <tr key={t.id} className="hover:bg-blue-50/20 dark:hover:bg-blue-900/5 text-sm transition-colors">
-                  <td className="p-5 font-mono text-xs text-gray-400">{t.date}</td>
-                  <td className={`p-5 font-bold ${t.type === 'Cash In' ? 'text-green-500' : 'text-red-500'}`}>
-                    {t.type}
-                  </td>
-                  <td className="p-5"><span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full font-bold text-[10px] uppercase">{t.category}</span></td>
-                  <td className="p-5 italic opacity-70">
-                    {t.description}
-                    {t.invoiceNo && <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded-[4px] text-[10px] font-bold border border-red-200 uppercase tracking-tighter">{t.invoiceNo}</span>}
-                  </td>
-                  <td className="p-5 text-right font-bold text-lg">TK {t.amount.toLocaleString()}</td>
-                  <td className="p-5 text-center">
-                     <button 
-                        onClick={() => handleDeleteTransaction(t.id)} 
-                        className="text-red-400 p-2 hover:bg-red-500/10 rounded-xl transition-all"
-                      >
-                        ×
-                      </button>
-                  </td>
-                </tr>
-              ))}
-              {transactions.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-20 text-center text-gray-400 italic">No accounting activity recorded yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         {/* 2. Office Transaction Terminal */}
+         <div className="classic-window">
+            <div className="classic-title-bar"><span>OFFICE CASH MANAGEMENT TERMINAL</span></div>
+            <div className="classic-body p-6 space-y-4">
+               <div className="grid grid-cols-2 gap-4">
+                  <button onClick={() => handlePostTransaction('Cash In')} className="classic-btn bg-green-700 text-white h-14 flex items-center justify-center gap-2">
+                     <ArrowUpCircle size={20}/> ADD INCOME
+                  </button>
+                  <button onClick={() => handlePostTransaction('Cash Out')} className="classic-btn bg-red-700 text-white h-14 flex items-center justify-center gap-2">
+                     <ArrowDownCircle size={20}/> ADD COST
+                  </button>
+               </div>
+               <div className="h-80 overflow-y-auto custom-scroll space-y-2 pr-2">
+                  {transactions.map(t => (
+                    <div key={t.id} className="p-3 bg-white border border-black/10 flex justify-between items-center group transition-colors hover:border-blue-300">
+                       <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-full ${t.type === 'Cash In' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {t.type === 'Cash In' ? <DollarSign size={14}/> : <CreditCard size={14}/>}
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black uppercase">{t.category}</p>
+                            <p className="text-[10px] text-gray-400 max-w-[200px] truncate">{t.description || t.date}</p>
+                          </div>
+                       </div>
+                       <div className="text-right flex items-center gap-4">
+                          <p className={`font-black text-xs ${t.type === 'Cash In' ? 'text-green-700' : 'text-red-700'}`}>
+                            {t.type === 'Cash In' ? '+' : '-'} TK {t.amount.toLocaleString()}
+                          </p>
+                          <button onClick={() => setTransactions(prev => prev.filter(p => p.id !== t.id))} className="text-gray-300 hover:text-red-700 transition-colors">
+                            <Trash2 size={12}/>
+                          </button>
+                       </div>
+                    </div>
+                  ))}
+                  {transactions.length === 0 && <p className="text-center text-gray-400 py-20 italic text-[11px] uppercase">No manual logs</p>}
+               </div>
+            </div>
+         </div>
+
+         {/* 3. Enhanced Bill Submission Terminal */}
+         <div className="classic-window">
+            <div className="classic-title-bar"><span>BILL SUBMISSION & INVOICE LOOKUP ENGINE</span></div>
+            <div className="classic-body p-6 space-y-6 bg-gray-50">
+               <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-500">SEARCH INVOICE (AUTO-DETECTION)</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
+                    <input 
+                      value={invoiceSearch}
+                      onChange={e => setInvoiceSearch(e.target.value.toUpperCase())}
+                      className="classic-input w-full pl-10 h-14 font-black text-xl tracking-tighter" 
+                      placeholder="SCAN OR TYPE INVOICE..."
+                    />
+                  </div>
+               </div>
+
+               {invoiceMatch ? (
+                 <div className="classic-window bg-white shadow-lg animate-fadeIn border-blue-800">
+                    <div className="classic-title-bar !bg-blue-900"><span>INVOICE DETAILS: {invoiceMatch.invoiceNo}</span></div>
+                    <div className="p-4 space-y-4">
+                       <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                             <p className="text-[9px] font-bold text-gray-400 uppercase">SHIPPER</p>
+                             <p className="text-xs font-black truncate">{invoiceMatch.shipper}</p>
+                          </div>
+                          <div className="space-y-1">
+                             <p className="text-[9px] font-bold text-gray-500 uppercase">BUYER</p>
+                             <p className="text-xs font-black">{invoiceMatch.buyer}</p>
+                          </div>
+                          <div className="space-y-1 bg-gray-50 p-2 border border-black/5">
+                             <p className="text-[9px] font-bold text-blue-800 uppercase">TOTAL INDENT</p>
+                             <p className="text-sm font-black font-mono">TK {invoiceMatch.totalIndent.toLocaleString()}</p>
+                          </div>
+                          <div className="space-y-1 bg-gray-50 p-2 border border-black/5">
+                             <p className="text-[9px] font-bold text-green-700 uppercase">PAID AMOUNT</p>
+                             <p className="text-sm font-black font-mono">TK {(Number(invoiceMatch.paid || 0)).toLocaleString()}</p>
+                          </div>
+                       </div>
+                       
+                       <div className="classic-inset p-3 bg-red-50 text-center border-red-200">
+                          <p className="text-[10px] font-black text-red-800 uppercase mb-1 tracking-widest">REMAINING DUE</p>
+                          <p className="text-2xl font-black font-mono text-red-700">TK {(Number(invoiceMatch.totalIndent || 0) - Number(invoiceMatch.paid || 0)).toLocaleString()}</p>
+                       </div>
+
+                       <div className="space-y-2 border-t pt-4">
+                          <label className="text-[10px] font-bold text-gray-600 block uppercase">SUBMIT BILL AMOUNT (TK)</label>
+                          <div className="flex gap-2">
+                             <input 
+                               type="number"
+                               value={submitAmount}
+                               onChange={e => setSubmitAmount(e.target.value)}
+                               className="classic-input flex-1 h-12 font-black text-lg text-center" 
+                               placeholder="0.00"
+                             />
+                             <button onClick={handleBillSubmit} className="classic-btn bg-blue-800 text-white px-6 flex items-center gap-2">
+                                <FileCheck size={16}/> SUBMIT
+                             </button>
+                          </div>
+                          {submittedInvoices.includes(invoiceMatch.invoiceNo) && (
+                            <p className="text-[9px] font-bold text-orange-600 text-center mt-1 uppercase italic tracking-widest animate-pulse">Bill submission active for this record</p>
+                          )}
+                       </div>
+                    </div>
+                 </div>
+               ) : invoiceSearch ? (
+                 <div className="flex flex-col items-center justify-center py-20 text-red-400 bg-white border border-dashed border-red-200">
+                   <AlertCircle size={32} strokeWidth={1}/>
+                   <p className="font-bold text-[11px] mt-2 uppercase">No Matching Records</p>
+                 </div>
+               ) : (
+                 <div className="flex flex-col items-center justify-center py-20 text-gray-300 bg-white border border-dashed border-gray-200">
+                    <SearchIcon size={40} strokeWidth={1}/>
+                    <p className="italic text-[10px] mt-2 uppercase font-bold tracking-widest">Awaiting Input Data...</p>
+                 </div>
+               )}
+            </div>
+         </div>
       </div>
     </div>
   );
 };
 
-const FinanceCard = ({ label, value, icon, color, detail }: any) => {
-  const borderColors = {
-    blue: "border-blue-500",
-    green: "border-green-500",
-    red: "border-red-500"
-  }[color as 'blue' | 'green' | 'red'];
-
-  return (
-    <div className={`neu-panel p-8 flex flex-col items-center justify-center text-center border-t-8 ${borderColors} hover:scale-[1.02] transition-transform cursor-default`}>
-      <div className="p-4 neu-inset rounded-2xl mb-4 text-gray-600">{icon}</div>
-      <p className="text-[10px] uppercase font-bold text-gray-400 mb-1 tracking-[0.2em]">{label}</p>
-      <h3 className="text-3xl font-bold font-orbitron mb-1">TK {value}</h3>
-      {detail && <p className="text-[9px] font-bold text-blue-500 opacity-60 uppercase">{detail}</p>}
-    </div>
-  );
-};
+const AlertCircle = ({ size, strokeWidth }: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+);
 
 export default Accounts;

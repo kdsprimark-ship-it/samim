@@ -4,81 +4,214 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SunnyTrans Pro</title>
+  <title>SunnyTrans Pro ERP</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-color: #e0e5ec;
-      --text-color: #4a5568;
-      --primary-color: #3b82f6;
-      --shadow-light: #ffffff;
-      --shadow-dark: #a3b1c6;
+      --bg-color: #c0c7d1;
+      --text-color: #000000;
       --font-family: 'Poppins', sans-serif;
-      --box-radius: 20px;
+      --popbox-color: #000080;
     }
     .dark {
       --bg-color: #1a202c;
       --text-color: #e2e8f0;
-      --shadow-light: #2d3748;
-      --shadow-dark: #171923;
     }
     body {
       font-family: var(--font-family);
       background-color: var(--bg-color);
       color: var(--text-color);
-      transition: background-color 0.3s, color 0.3s;
       margin: 0;
       padding: 0;
       min-height: 100vh;
-    }
-    .neu-panel {
-      background: var(--bg-color);
-      border-radius: var(--box-radius);
-      box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
-    }
-    .neu-inset {
-      box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
-    }
-    .btn-neon {
-      background: linear-gradient(45deg, #06b6d4, #3b82f6);
-      box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
-      transition: all 0.2s;
-    }
-    .btn-neon:hover {
-      box-shadow: 0 0 10px #06b6d4, 0 0 20px #3b82f6;
-      transform: translateY(-1px);
-    }
-    .custom-scroll::-webkit-scrollbar { width: 6px; }
-    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    .dark .custom-scroll::-webkit-scrollbar-thumb { background: #4a5568; }
-
-    /* Global Animations */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fadeIn {
-      animation: fadeIn 0.4s ease-out forwards;
+      overflow: hidden;
     }
     
-    @keyframes zoomIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
+    /* Classic ERP / ASSYCUDA Style */
+    .classic-window {
+      background: #c0c7d1;
+      border: 2px solid #ffffff;
+      border-right-color: #444;
+      border-bottom-color: #444;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
     }
-    .animate-zoomIn {
-      animation: zoomIn 0.3s ease-out forwards;
+    .classic-title-bar {
+      background: linear-gradient(to right, var(--popbox-color) 0%, #0080c0 100%);
+      /* Checkerboard texture overlay */
+      background-image: 
+        radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+        linear-gradient(to right, var(--popbox-color) 0%, #0080c0 100%);
+      background-size: 4px 4px, 100% 100%;
+      padding: 3px 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      border-bottom: 1px solid #000;
+    }
+    .classic-body {
+      background: #f0f0f0;
+      border: 1px solid #777;
+      margin: 2px;
+      flex-grow: 1;
+    }
+    .classic-footer {
+      background: #c0c7d1;
+      padding: 2px 6px;
+      border-top: 1px solid #777;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 9px;
+      color: #333;
+    }
+    .classic-inset {
+      box-shadow: inset 1px 1px 3px rgba(0,0,0,0.2);
+      border: 1px solid #888;
+      background: white;
+    }
+    .classic-info-bar {
+      background: #d4d0c8;
+      border: 1px solid #fff;
+      border-right-color: #808080;
+      border-bottom-color: #808080;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .classic-input {
+      background: white;
+      border: 1px solid #777;
+      border-right-color: #ccc;
+      border-bottom-color: #ccc;
+      padding: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      outline: none;
+      border-radius: 0;
+    }
+    .classic-input:focus {
+        border-color: var(--popbox-color);
+        background: #fffbe6;
+    }
+    .classic-btn {
+      background: #d4d0c8;
+      border: 1px solid #fff;
+      border-right-color: #444;
+      border-bottom-color: #444;
+      padding: 4px 12px;
+      font-size: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      text-transform: uppercase;
+      color: black;
+      border-radius: 0;
+    }
+    .classic-btn:active {
+      border: 1px solid #444;
+      border-right-color: #fff;
+      border-bottom-color: #fff;
+      padding-top: 5px;
+      padding-left: 13px;
     }
 
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-5px); }
-      75% { transform: translateX(5px); }
+    /* Message Box styling based on Image 1 */
+    .classic-swal {
+      border-radius: 0 !important;
+      border: 2px solid #fff !important;
+      border-right-color: #444 !important;
+      border-bottom-color: #444 !important;
+      background: #c0c7d1 !important;
+      padding: 0 !important;
+      overflow: hidden;
     }
-    .animate-shake {
-      animation: shake 0.2s ease-in-out infinite;
-      animation-iteration-count: 2;
+    .classic-swal .swal2-header {
+      background: #b2b8c2 !important; /* Specific grey from image */
+      background-image: radial-gradient(#ffffff 0.5px, transparent 0.5px) !important;
+      background-size: 3px 3px !important;
+      border-bottom: 1px solid #888 !important;
+      padding: 4px 10px !important;
+      display: flex !important;
+      flex-direction: row !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+    }
+    .classic-swal .swal2-title {
+      font-size: 11px !important;
+      text-transform: none !important;
+      font-weight: bold !important;
+      color: black !important;
+      margin: 0 !important;
+      order: -1;
+    }
+    /* Adding the "Message" label and dotted texture */
+    .classic-swal::before {
+        content: "Message";
+        position: absolute;
+        top: 6px;
+        left: 10px;
+        font-size: 10px;
+        font-weight: bold;
+        color: black;
+        z-index: 10;
+    }
+    .classic-swal .swal2-close {
+        font-size: 14px !important;
+        color: black !important;
+        top: 0 !important;
+        right: 0 !important;
+        height: 20px !important;
+        width: 20px !important;
+        background: #d4d0c8 !important;
+        border: 1px solid #fff !important;
+        border-right-color: #444 !important;
+        border-bottom-color: #444 !important;
+    }
+    .classic-swal .swal2-html-container {
+      padding: 20px !important;
+      font-size: 13px !important;
+      font-weight: bold !important;
+      text-align: left !important;
+      color: black !important;
+      margin: 0 !important;
+    }
+    .classic-swal .swal2-icon {
+        border: none !important;
+        margin: 0 15px 0 0 !important;
+        width: 40px !important;
+        height: 40px !important;
+    }
+    /* Checkmark button based on Image 1 */
+    .classic-swal .swal2-confirm {
+      background: #d4d0c8 !important;
+      border: 1px solid #fff !important;
+      border-right-color: #444 !important;
+      border-bottom-color: #444 !important;
+      color: transparent !important;
+      width: 40px !important;
+      height: 30px !important;
+      padding: 0 !important;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='navy' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") !important;
+      background-repeat: no-repeat !important;
+      background-position: center !important;
+    }
+
+    .custom-scroll::-webkit-scrollbar { width: 12px; background: #c0c7d1; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #d4d0c8; border: 1px solid #fff; border-right-color: #444; border-bottom-color: #444; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.2s ease-out forwards;
     }
   </style>
 <script type="importmap">

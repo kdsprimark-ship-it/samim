@@ -1,31 +1,30 @@
 
 import React from 'react';
 import { ListData } from '../types';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Database } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 interface BusinessSettingsProps {
   lists: ListData;
   setLists: React.Dispatch<React.SetStateAction<ListData>>;
+  swalSize: number;
 }
 
-const BusinessSettings: React.FC<BusinessSettingsProps> = ({ lists, setLists }) => {
-  const isDark = document.documentElement.classList.contains('dark');
+const BusinessSettings: React.FC<BusinessSettingsProps> = ({ lists, setLists, swalSize }) => {
 
   const addItem = async (category: keyof ListData) => {
     const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
     const { value: itemValue } = await Swal.fire({
-      title: `Add New ${categoryName}`,
+      title: `SYSTEM LIST UPDATE: ${categoryName.toUpperCase()}`,
       input: 'text',
-      inputLabel: `Enter the name for this ${categoryName}`,
-      inputPlaceholder: 'Type here...',
+      inputPlaceholder: 'ENTER NEW ENTRY NAME...',
       showCancelButton: true,
-      confirmButtonColor: '#3b82f6',
-      background: isDark ? '#1a202c' : '#ffffff',
-      color: isDark ? '#e2e8f0' : '#4a5568',
+      confirmButtonText: 'APPEND TO LIST',
+      width: swalSize,
+      customClass: { popup: 'classic-swal' },
       inputValidator: (value) => {
-        if (!value) return 'You need to write something!';
-        if (lists[category].includes(value)) return 'This item already exists!';
+        if (!value) return 'VALID INPUT REQUIRED';
+        if (lists[category].includes(value)) return 'DUPLICATE ENTRY DETECTED';
       }
     });
 
@@ -36,13 +35,12 @@ const BusinessSettings: React.FC<BusinessSettingsProps> = ({ lists, setLists }) 
       }));
       
       Swal.fire({
-        title: 'Added!',
-        text: `${itemValue} added to ${categoryName} list.`,
+        title: 'DATABASE UPDATED',
         icon: 'success',
         timer: 1500,
         showConfirmButton: false,
-        background: isDark ? '#1a202c' : '#ffffff',
-        color: isDark ? '#e2e8f0' : '#4a5568',
+        width: swalSize,
+        customClass: { popup: 'classic-swal' }
       });
     }
   };
@@ -50,15 +48,13 @@ const BusinessSettings: React.FC<BusinessSettingsProps> = ({ lists, setLists }) 
   const deleteItem = async (category: keyof ListData, index: number) => {
     const itemName = lists[category][index];
     const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: `Remove "${itemName}" from the list?`,
+      title: 'CONFIRM REMOVAL?',
+      text: `Deleting "${itemName}" from operational lists.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#3b82f6',
-      confirmButtonText: 'Yes, remove it!',
-      background: isDark ? '#1a202c' : '#ffffff',
-      color: isDark ? '#e2e8f0' : '#4a5568',
+      confirmButtonText: 'YES, REMOVE',
+      width: swalSize,
+      customClass: { popup: 'classic-swal' }
     });
 
     if (result.isConfirmed) {
@@ -66,58 +62,46 @@ const BusinessSettings: React.FC<BusinessSettingsProps> = ({ lists, setLists }) 
         ...prev,
         [category]: prev[category].filter((_, i) => i !== index)
       }));
-      
-      Swal.fire({
-        title: 'Removed!',
-        icon: 'success',
-        timer: 1000,
-        showConfirmButton: false,
-        background: isDark ? '#1a202c' : '#ffffff',
-        color: isDark ? '#e2e8f0' : '#4a5568',
-      });
     }
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-2xl font-bold text-indigo-600">Business Lists & Categories</h3>
+    <div className="space-y-6 animate-fadeIn">
+      <div className="classic-info-bar rounded">
+        <div className="flex items-center gap-2 text-blue-900 font-bold text-xs uppercase">
+          <Database size={14} /> MASTER OPERATIONAL DIRECTORY
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <ListManager title="Shipper List" items={lists.shipper} onAdd={() => addItem('shipper')} onDelete={(i: number) => deleteItem('shipper', i)} color="blue" />
-        <ListManager title="Buyer List" items={lists.buyer} onAdd={() => addItem('buyer')} onDelete={(i: number) => deleteItem('buyer', i)} color="pink" />
-        <ListManager title="Depot List" items={lists.depot} onAdd={() => addItem('depot')} onDelete={(i: number) => deleteItem('depot', i)} color="purple" />
-        <ListManager title="Staff Members" items={lists.staff} onAdd={() => addItem('staff')} onDelete={(i: number) => deleteItem('staff', i)} color="green" />
-        <ListManager title="Export Information" items={lists.exportInfo} onAdd={() => addItem('exportInfo')} onDelete={(i: number) => deleteItem('exportInfo', i)} color="orange" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <ListManager title="SHIPPER DIRECTORY" items={lists.shipper} onAdd={() => addItem('shipper')} onDelete={(i: number) => deleteItem('shipper', i)} />
+        <ListManager title="BUYER DIRECTORY" items={lists.buyer} onAdd={() => addItem('buyer')} onDelete={(i: number) => deleteItem('buyer', i)} />
+        <ListManager title="DEPOT / WAREHOUSE" items={lists.depot} onAdd={() => addItem('depot')} onDelete={(i: number) => deleteItem('depot', i)} />
+        <ListManager title="SYSTEM OPERATORS" items={lists.staff} onAdd={() => addItem('staff')} onDelete={(i: number) => deleteItem('staff', i)} />
+        <ListManager title="EXIT POINTS / PORTS" items={lists.exportInfo} onAdd={() => addItem('exportInfo')} onDelete={(i: number) => deleteItem('exportInfo', i)} />
       </div>
     </div>
   );
 };
 
-const ListManager = ({ title, items, onAdd, onDelete, color }: any) => {
-  const colorMap = {
-    blue: "text-blue-500 bg-blue-500/10",
-    pink: "text-pink-500 bg-pink-500/10",
-    purple: "text-purple-500 bg-purple-500/10",
-    green: "text-green-500 bg-green-500/10",
-    orange: "text-orange-500 bg-orange-500/10",
-  }[color as 'blue'|'pink'|'purple'|'green'|'orange'];
-
+const ListManager = ({ title, items, onAdd, onDelete }: any) => {
   return (
-    <div className="neu-panel flex flex-col h-[400px]">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-        <h4 className="font-bold text-sm">{title}</h4>
-        <button onClick={onAdd} className={`p-2 rounded-lg ${colorMap} hover:opacity-80`}><Plus size={16}/></button>
+    <div className="classic-window h-[400px]">
+      <div className="classic-title-bar">
+        <span>{title}</span>
+        <button onClick={onAdd} className="classic-btn p-0 px-2">+</button>
       </div>
-      <div className="flex-1 overflow-y-auto custom-scroll p-4 space-y-2">
+      <div className="classic-body flex-1 overflow-y-auto custom-scroll p-2 space-y-1">
         {items.map((item: string, i: number) => (
-          <div key={i} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl group">
-            <span className="text-sm font-medium">{item}</span>
-            <button onClick={() => onDelete(i)} className="p-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
+          <div key={i} className="flex justify-between items-center p-2 bg-white border border-black/5 hover:bg-gray-50 text-[11px] font-bold group">
+            <span className="uppercase">{item}</span>
+            <button onClick={() => onDelete(i)} className="text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={12}/></button>
           </div>
         ))}
-        {items.length === 0 && <p className="text-center text-gray-400 text-xs mt-8">No items found.</p>}
+        {items.length === 0 && <p className="text-center text-gray-400 italic text-[10px] mt-10">LIST IS EMPTY</p>}
+      </div>
+      <div className="classic-footer text-[8px] font-bold">
+        <span>COUNT: {items.length}</span>
       </div>
     </div>
   );
