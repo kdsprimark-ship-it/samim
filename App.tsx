@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Database, FileText, Clock, Settings, LogOut, Truck as TruckIcon, 
   DollarSign, Users, Tag, Briefcase, Layers, Info, Anchor, UserPlus, FileCheck, 
   PlusCircle, Globe, ClipboardList, Wallet, Settings2, ShieldCheck, Menu, RefreshCw,
-  Minimize2
+  Minimize2, Maximize2
 } from 'lucide-react';
 import { 
   Shipment, Transaction, AppSettings, ListData, Shipper, Employee, Buyer, Depot, 
@@ -190,9 +190,9 @@ const App: React.FC = () => {
         {isFullScreen && (
           <button 
             onClick={() => setIsFullScreen(false)} 
-            className="fixed top-4 right-4 z-[100] bg-rose-600 text-white p-3 rounded-full shadow-2xl hover:bg-rose-700 transition-all flex items-center gap-2 font-black text-[10px]"
+            className="fixed top-6 right-6 z-[100] bg-rose-600 text-white p-4 rounded-full shadow-[0_0_20px_rgba(225,29,72,0.5)] hover:bg-rose-700 transition-all flex items-center gap-2 font-black text-[11px] border-2 border-white/20 active:scale-95"
           >
-            <Minimize2 size={16}/> EXIT TERMINAL MODE
+            <Minimize2 size={20}/> EXIT TERMINAL MODE
           </button>
         )}
 
@@ -200,7 +200,7 @@ const App: React.FC = () => {
           {(() => {
             const commonProps = { swalSize: settings.swalSize };
             switch (activeTab) {
-              case 'dashboard': return <Dashboard shipments={userShipments} transactions={transactions} settings={settings} setShipments={setShipments} onToggleFullscreen={() => setIsFullScreen(!isFullScreen)} isFullScreen={isFullScreen} />;
+              case 'dashboard': return <Dashboard shipments={userShipments} transactions={transactions} settings={settings} setShipments={setShipments} onToggleFullscreen={() => setIsFullScreen(!isFullScreen)} isFullScreen={isFullScreen} performSync={() => performSync('PULL')} isSyncing={isSyncing} />;
               case 'account_info': return <AccountInfo transactions={transactions} setTransactions={setTransactions} shipments={shipments} setShipments={setShipments} lists={lists} employees={employees} {...commonProps} />;
               case 'live_sheet': return <LiveSheet shipments={userShipments} setShipments={setShipments} shippers={shippers} buyers={buyers} employees={employees} depots={depots} prices={prices} {...commonProps} />;
               case 'master_sheet': return <MasterDataSheet shipments={userShipments} {...commonProps} />;
@@ -219,7 +219,7 @@ const App: React.FC = () => {
               case 'sub_accounts': return <SubAccounts lists={lists} setLists={setLists} {...commonProps} />;
               case 'user_mgmt': return <UserManagement employees={employees} setEmployees={setEmployees} shipments={shipments} {...commonProps} />;
               case 'settings': return <SystemSettings settings={settings} setSettings={setSettings} onSyncRequest={() => performSync('PUSH', true)} />;
-              default: return <Dashboard shipments={userShipments} transactions={transactions} settings={settings} />;
+              default: return <Dashboard shipments={userShipments} transactions={transactions} settings={settings} onToggleFullscreen={() => setIsFullScreen(!isFullScreen)} isFullScreen={isFullScreen} />;
             }
           })()}
         </div>
